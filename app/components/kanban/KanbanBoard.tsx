@@ -5,7 +5,6 @@ import type { Message, KanbanStatus } from '@/types/database'
 import { KanbanColumn } from './KanbanColumn'
 import { MessageDetail } from '@/app/components/message/MessageDetail'
 import { moveMessageAction } from '@/app/actions/messages'
-import { logoutAction } from '@/app/actions/auth'
 
 type Columns = Record<KanbanStatus, Message[]>
 
@@ -23,10 +22,9 @@ function groupByStatus(messages: Message[]): Columns {
 
 interface Props {
   initialMessages: Message[]
-  userEmail: string
 }
 
-export function KanbanBoard({ initialMessages, userEmail }: Props) {
+export function KanbanBoard({ initialMessages }: Props) {
   const [columns, setColumns] = useState<Columns>(() => groupByStatus(initialMessages))
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
@@ -101,28 +99,11 @@ export function KanbanBoard({ initialMessages, userEmail }: Props) {
             </p>
           </div>
 
-          {/* Stats chips + user */}
-          <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-3 sm:flex">
-              <Chip label="Arrivati"       count={columns.unread.length}  color="blue" />
-              <Chip label="In svolgimento" count={columns.read.length}    color="amber" />
-              <Chip label="Conclusi"       count={columns.replied.length} color="emerald" />
-            </div>
-
-            <div className="flex items-center gap-2 border-l border-zinc-200 pl-3">
-              <span className="hidden text-xs text-zinc-500 sm:block">{userEmail}</span>
-              <form action={logoutAction}>
-                <button
-                  type="submit"
-                  title="Esci"
-                  className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
-                  </svg>
-                </button>
-              </form>
-            </div>
+          {/* Stats chips */}
+          <div className="hidden items-center gap-3 sm:flex">
+            <Chip label="Arrivati"       count={columns.unread.length}  color="blue" />
+            <Chip label="In svolgimento" count={columns.read.length}    color="amber" />
+            <Chip label="Conclusi"       count={columns.replied.length} color="emerald" />
           </div>
         </div>
       </header>
