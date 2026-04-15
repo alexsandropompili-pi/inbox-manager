@@ -117,7 +117,7 @@ export function KanbanColumn({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={[
-          'flex flex-1 flex-col gap-2.5 rounded-lg p-2.5 transition-all duration-150',
+          'flex flex-1 flex-col gap-2.5 overflow-y-auto rounded-lg p-2.5 transition-all duration-150',
           'min-h-32',
           isDragOver ? config.dropRing : 'ring-1 ring-transparent',
         ].join(' ')}
