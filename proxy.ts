@@ -1,16 +1,21 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Routes that are accessible without authentication
+const PUBLIC_PATHS = ['/login', '/reset-password']
+
 /**
- * Next.js 16 Proxy (formerly middleware).
- * Runs on every request before rendering. Protects the dashboard route and
- * redirects authenticated users away from the login page.
+ * Next.js 16 Proxy (replaces middleware.ts).
+ * Runs on every non-static request before rendering.
  *
- * Uses an optimistic session check (cookie-only, no DB round-trip) — the
- * Server Component in page.tsx re-validates with supabase.auth.getUser().
+ * - Unauthenticated requests to any protected route → redirect to /login
+ * - Authenticated requests to /login or /reset-password → redirect to /
+ * - Also refreshes the Supabase session cookie when it's about to expire
  */
 export async function proxy(request: NextRequest) {
-  // Start with a pass-through response; will be replaced if cookies are refreshed.
+  const { pathname } = request.nextUrl
+
+  // Build a mutable response so Supabase can write refreshed tokens
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -22,7 +27,7 @@ export async function proxy(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          // Forward refreshed tokens to both request and response.
+          // Write refreshed tokens onto both request and response
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           response = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
@@ -33,20 +38,20 @@ export async function proxy(request: NextRequest) {
     },
   )
 
-  // getUser() makes a lightweight JWT validation (no DB call).
+  // Validate the session against Supabase (verifies the JWT server-side)
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const path = request.nextUrl.pathname
+  const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
 
-  // Unauthenticated user trying to access the dashboard → send to login.
-  if (path === '/' && !user) {
+  // Unauthenticated user on a protected route → send to login
+  if (!user && !isPublicPath) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Authenticated user hitting the login page → send to dashboard.
-  if (path === '/login' && user) {
+  // Authenticated user on a public route (login/reset) → send to dashboard
+  if (user && isPublicPath) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
@@ -55,7 +60,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Run on all paths except Next.js internals and static assets.
+    // Run on all paths except Next.js internals, static assets, and images
     '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
