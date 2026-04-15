@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useTransition } from 'react'
-import type { Message, KanbanStatus, AiResponse, MessagePriority, MessageChannel } from '@/types/database'
+import type { Message, KanbanStatus, AiResponse, MessagePriority, MessageChannel, Spedizione } from '@/types/database'
 import type { Operator } from '@/lib/team'
 import { findOperator } from '@/lib/team'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -30,6 +30,14 @@ const CHANNEL_ICON: Record<MessageChannel, string> = {
   whatsapp: '💬',
 }
 
+const STATO_COLOR: Record<string, string> = {
+  'In transito':  'bg-blue-50 text-blue-700 ring-blue-200',
+  'Consegnato':   'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  'Ritardo':      'bg-amber-50 text-amber-700 ring-amber-200',
+  'In attesa':    'bg-zinc-100 text-zinc-600 ring-zinc-200',
+  'Fermo':        'bg-red-50 text-red-700 ring-red-200',
+}
+
 function formatFull(iso: string) {
   return new Intl.DateTimeFormat('it-IT', {
     dateStyle: 'long',
@@ -44,6 +52,100 @@ function formatShort(iso: string) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(iso))
+}
+
+function formatConsegna(iso: string) {
+  return new Intl.DateTimeFormat('it-IT', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(iso))
+}
+
+// ─── Spedizione card ──────────────────────────────────────────────────────────
+
+function SpedizioneCard({ spedizione }: { spedizione: Spedizione }) {
+  const statoColor = STATO_COLOR[spedizione.stato] ?? 'bg-zinc-100 text-zinc-600 ring-zinc-200'
+
+  return (
+    <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 space-y-3">
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <span className="font-mono text-sm font-bold tracking-widest text-indigo-900">
+          {spedizione.numero}
+        </span>
+        <span
+          className={[
+            'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset',
+            statoColor,
+          ].join(' ')}
+        >
+          {spedizione.stato}
+        </span>
+      </div>
+
+      {/* Detail grid */}
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+        {spedizione.posizione_attuale && (
+          <>
+            <dt className="font-medium text-indigo-500">Posizione</dt>
+            <dd className="text-indigo-900">{spedizione.posizione_attuale}</dd>
+          </>
+        )}
+        {spedizione.data_prevista_consegna && (
+          <>
+            <dt className="font-medium text-indigo-500">Consegna</dt>
+            <dd className="text-indigo-900 font-medium">
+              {formatConsegna(spedizione.data_prevista_consegna)}
+            </dd>
+          </>
+        )}
+        {spedizione.nome_autista && (
+          <>
+            <dt className="font-medium text-indigo-500">Autista</dt>
+            <dd className="text-indigo-900">
+              {spedizione.nome_autista}
+              {spedizione.targa && (
+                <span className="ml-1.5 font-mono text-xs bg-white border border-indigo-200 rounded px-1 py-0.5 text-indigo-700">
+                  {spedizione.targa}
+                </span>
+              )}
+            </dd>
+          </>
+        )}
+        {spedizione.mittente && (
+          <>
+            <dt className="font-medium text-indigo-500">Mittente</dt>
+            <dd className="text-indigo-900">{spedizione.mittente}</dd>
+          </>
+        )}
+        {spedizione.destinatario && (
+          <>
+            <dt className="font-medium text-indigo-500">Destinatario</dt>
+            <dd className="text-indigo-900">{spedizione.destinatario}</dd>
+          </>
+        )}
+        {spedizione.indirizzo_destinazione && (
+          <>
+            <dt className="font-medium text-indigo-500">Indirizzo</dt>
+            <dd className="text-indigo-900">{spedizione.indirizzo_destinazione}</dd>
+          </>
+        )}
+        {spedizione.note && (
+          <>
+            <dt className="font-medium text-indigo-500">Note</dt>
+            <dd className="text-indigo-900 italic">{spedizione.note}</dd>
+          </>
+        )}
+      </dl>
+
+      <p className="text-[10px] text-indigo-400 flex items-center gap-1">
+        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Dati integrati automaticamente nella risposta AI
+      </p>
+    </div>
+  )
 }
 
 // ─── AI response history item ─────────────────────────────────────────────────
@@ -109,17 +211,40 @@ export function MessageDetail({
   const [isStreaming, setIsStreaming] = useState(false)
   const [history, setHistory] = useState<AiResponse[]>([])
   const [confirmMode, setConfirmMode] = useState<'approve' | 'reject' | null>(null)
-  const [, startTransition] = useTransition()
 
+  // Spedizione lookup state
+  // undefined = loading, null = not found / no SP pattern, Spedizione = found
+  const [spedizione, setSpedizione] = useState<Spedizione | null | undefined>(undefined)
+  const [spedizioneNumero, setSpedizioneNumero] = useState<string | null>(null)
+
+  const [, startTransition] = useTransition()
   const abortRef = useRef<AbortController | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Load history on mount / whenever message changes
+  // Load AI response history
   useEffect(() => {
     getResponseHistoryAction(message.id).then(setHistory).catch(console.error)
   }, [message.id])
 
-  // Auto-resize textarea as content grows
+  // Auto-lookup spedizione when message changes
+  useEffect(() => {
+    setSpedizione(undefined)
+    setSpedizioneNumero(null)
+
+    fetch('/api/spedizioni/lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject: message.subject, body: message.body }),
+    })
+      .then((r) => r.json())
+      .then(({ numero, spedizione: found }: { numero: string | null; spedizione: Spedizione | null }) => {
+        setSpedizioneNumero(numero)
+        setSpedizione(found ?? null)
+      })
+      .catch(() => setSpedizione(null))
+  }, [message.id, message.subject, message.body])
+
+  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
@@ -127,11 +252,9 @@ export function MessageDetail({
     }
   }, [draft])
 
-  // Abort any in-flight stream when the panel closes
+  // Abort stream on panel close
   useEffect(() => {
-    return () => {
-      abortRef.current?.abort()
-    }
+    return () => { abortRef.current?.abort() }
   }, [])
 
   async function handleGenerate() {
@@ -150,7 +273,10 @@ export function MessageDetail({
       const res = await fetch('/api/ai/generate-response', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({
+          message,
+          spedizione: spedizione ?? null,
+        }),
         signal: ctrl.signal,
       })
 
@@ -158,8 +284,8 @@ export function MessageDetail({
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
-
       let accumulated = ''
+
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -167,9 +293,7 @@ export function MessageDetail({
         setDraft(accumulated)
       }
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        console.error('Streaming error:', err)
-      }
+      if ((err as Error).name !== 'AbortError') console.error('Streaming error:', err)
     } finally {
       setIsStreaming(false)
     }
@@ -209,6 +333,7 @@ export function MessageDetail({
 
   const channel = message.channel ?? 'email'
   const hasDraft = draft.trim().length > 0
+  const spedizioneLoading = spedizione === undefined
 
   return (
     <>
@@ -310,6 +435,34 @@ export function MessageDetail({
             </section>
           )}
 
+          {/* Dati Spedizione — shown only when SP-XXXX-XXX pattern found */}
+          {(spedizioneLoading || spedizioneNumero) && (
+            <section>
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Dati Spedizione
+              </h3>
+
+              {spedizioneLoading ? (
+                <div className="flex items-center gap-2 rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 text-xs text-zinc-400">
+                  <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                  Ricerca spedizione in corso…
+                </div>
+              ) : spedizione ? (
+                <SpedizioneCard spedizione={spedizione} />
+              ) : (
+                <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50/60 px-4 py-3 text-xs text-amber-700">
+                  <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  Spedizione <span className="font-mono font-semibold mx-1">{spedizioneNumero}</span> non trovata nel sistema
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Assignment */}
           <section>
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
@@ -384,15 +537,23 @@ export function MessageDetail({
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 Risposta AI
+                {spedizione && (
+                  <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-medium text-indigo-700 normal-case tracking-normal">
+                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                    Dati spedizione attivi
+                  </span>
+                )}
               </h3>
               <button
                 onClick={handleGenerate}
-                disabled={false}
+                disabled={spedizioneLoading}
                 className={[
                   'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
                   isStreaming
                     ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                    : 'bg-blue-600 text-white hover:bg-blue-700',
+                    : spedizioneLoading
+                      ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700',
                 ].join(' ')}
               >
                 {isStreaming ? (

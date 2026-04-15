@@ -65,6 +65,25 @@ export interface Message {
   created_at: string
 }
 
+// ─── Spedizioni ───────────────────────────────────────────────────────────────
+
+export interface Spedizione {
+  id: string
+  numero: string                          // SP-2026-001
+  stato: string                           // In transito | Consegnato | Ritardo | In attesa | Fermo
+  posizione_attuale: string | null
+  data_prevista_consegna: string | null   // ISO timestamp
+  nome_autista: string | null
+  targa: string | null
+  mittente: string | null
+  destinatario: string | null
+  indirizzo_destinazione: string | null
+  note: string | null
+  created_at: string
+}
+
+export type SpedizioneInsert = Omit<Spedizione, 'id' | 'created_at'> & { id?: string }
+
 export type AiResponseStatus = 'draft' | 'sent' | 'rejected'
 
 export interface AiResponse {
@@ -142,6 +161,12 @@ export interface Database {
         Row: WithIndex<AiResponse>
         Insert: WithIndex<AiResponseInsert>
         Update: WithIndex<AiResponseUpdate>
+        Relationships: []
+      }
+      spedizioni: {
+        Row: WithIndex<Spedizione>
+        Insert: WithIndex<SpedizioneInsert>
+        Update: WithIndex<Partial<SpedizioneInsert>>
         Relationships: []
       }
     }
