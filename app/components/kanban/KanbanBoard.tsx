@@ -1,9 +1,11 @@
 'use client'
 
-import { Fragment, useState, useTransition } from 'react'
+import { Fragment, useMemo, useState, useTransition } from 'react'
 import type { Message, KanbanStatus } from '@/types/database'
 import { KanbanColumn } from './KanbanColumn'
 import { MessageDetail } from '@/app/components/message/MessageDetail'
+import { SearchBar, DEFAULT_FILTERS } from './SearchBar'
+import type { Filters } from './SearchBar'
 import { moveMessageAction } from '@/app/actions/messages'
 
 type Columns = Record<KanbanStatus, Message[]>
@@ -193,10 +195,47 @@ export function KanbanBoard({ initialMessages }: Props) {
   const [columns, setColumns] = useState<Columns>(() => groupByStatus(seed))
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
   const [, startTransition] = useTransition()
   const isDemo = initialMessages.length === 0
 
-  const totalMessages = Object.values(columns).reduce((sum, col) => sum + col.length, 0)
+  const isFiltered =
+    filters.query !== '' ||
+    filters.channel !== 'all' ||
+    filters.priority !== 'all' ||
+    filters.date !== 'all'
+
+  const filteredColumns = useMemo(() => {
+    const q = filters.query.trim().toLowerCase()
+    const now = Date.now()
+
+    function matches(msg: Message): boolean {
+      if (q) {
+        const hay = [msg.subject, msg.body, msg.from_email, msg.from_name ?? '']
+          .join(' ')
+          .toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      if (filters.channel !== 'all' && msg.channel !== filters.channel) return false
+      if (filters.priority !== 'all' && msg.priority !== filters.priority) return false
+      if (filters.date !== 'all') {
+        const ageDays = (now - new Date(msg.received_at).getTime()) / 86_400_000
+        if (filters.date === 'today' && ageDays > 1)  return false
+        if (filters.date === '7d'   && ageDays > 7)  return false
+        if (filters.date === '30d'  && ageDays > 30) return false
+      }
+      return true
+    }
+
+    return {
+      unread:  columns.unread.filter(matches),
+      read:    columns.read.filter(matches),
+      replied: columns.replied.filter(matches),
+    }
+  }, [columns, filters])
+
+  const totalMessages   = Object.values(columns).reduce((sum, col) => sum + col.length, 0)
+  const filteredTotal   = Object.values(filteredColumns).reduce((sum, col) => sum + col.length, 0)
 
   function handleDrop(messageId: string, fromStatus: KanbanStatus, toStatus: KanbanStatus) {
     // Optimistic update
@@ -269,18 +308,30 @@ export function KanbanBoard({ initialMessages }: Props) {
               )}
             </div>
             <p className="mt-0.5 text-sm text-zinc-500">
-              {isDemo ? 'Dati di esempio — collega il tuo account per iniziare' : `${totalMessages} messaggi totali`}
+              {isDemo
+                ? 'Dati di esempio — collega il tuo account per iniziare'
+                : isFiltered
+                  ? `${filteredTotal} di ${totalMessages} messaggi`
+                  : `${totalMessages} messaggi totali`}
             </p>
           </div>
 
           {/* Stats chips */}
           <div className="hidden items-center gap-2 sm:flex">
-            <Chip label="Arrivati"       count={columns.unread.length}  color="blue" />
-            <Chip label="In svolgimento" count={columns.read.length}    color="amber" />
-            <Chip label="Conclusi"       count={columns.replied.length} color="emerald" />
+            <Chip label="Arrivati"       count={filteredColumns.unread.length}  color="blue" />
+            <Chip label="In svolgimento" count={filteredColumns.read.length}    color="amber" />
+            <Chip label="Conclusi"       count={filteredColumns.replied.length} color="emerald" />
           </div>
         </div>
       </header>
+
+      {/* Search & filters bar */}
+      <SearchBar
+        filters={filters}
+        onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+        onReset={() => setFilters(DEFAULT_FILTERS)}
+        isFiltered={isFiltered}
+      />
 
       {/* Kanban columns */}
       <main className="flex flex-1 overflow-x-auto px-5 py-5">
@@ -292,7 +343,7 @@ export function KanbanBoard({ initialMessages }: Props) {
             )}
             <KanbanColumn
               status={status}
-              messages={columns[status]}
+              messages={filteredColumns[status]}
               pendingIds={pendingIds}
               onDrop={handleDrop}
               onSelectMessage={setSelectedMessage}
