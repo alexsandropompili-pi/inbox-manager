@@ -24,14 +24,20 @@ export type KanbanStatus = Extract<MessageStatus, 'arrived' | 'in_progress' | 'r
 export type MessagePriority = 'high' | 'medium' | 'low'
 export type MessageChannel = 'email' | 'whatsapp'
 export type MessageSettore = 'Traffico' | 'Magazzino' | 'Amministrazione'
+export type GradoUrgenza = 'bassa' | 'media' | 'alta' | 'critica'
+export type TipoDocumento = 'CMR' | 'DDT' | 'Fattura' | 'Bolla' | 'Ordine'
 
 export interface DatiEstratti {
-  targhe?: string[]
-  numeri_spedizione?: string[]
-  date_consegna?: string[]
-  quantita?: Array<{ prodotto: string; valore: number; unita: string }>
-  prodotti?: string[]
-  [key: string]: Json | undefined
+  /** Numero/codice spedizione alfanumerico (es. "SPD-001", "12345ABC"). null se assente. */
+  numero_spedizione: string | null
+  /** Targa automezzo in formato italiano (es. "AB123CD"). null se assente. */
+  targa_automezzo: string | null
+  /** Tipo di documento logistico riconosciuto nel testo. null se assente. */
+  tipo_documento: TipoDocumento | null
+  /** Luoghi di partenza e/o destinazione menzionati. null se assenti. */
+  punti_di_carico_scarico: { partenza: string | null; destinazione: string | null } | null
+  /** Grado di urgenza dedotto dal tono e dalle parole chiave del messaggio. */
+  grado_urgenza: GradoUrgenza
 }
 
 export interface Message {
