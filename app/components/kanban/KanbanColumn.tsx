@@ -15,7 +15,7 @@ interface ColumnConfig {
 }
 
 export const COLUMN_CONFIG: Record<KanbanStatus, ColumnConfig> = {
-  unread: {
+  arrived: {
     label:      'Arrivato',
     accentLine: 'bg-blue-500',
     headerText: 'text-blue-200',
@@ -23,7 +23,7 @@ export const COLUMN_CONFIG: Record<KanbanStatus, ColumnConfig> = {
     countText:  'text-blue-300',
     dropRing:   'ring-2 ring-blue-500/40 bg-blue-500/5',
   },
-  read: {
+  in_progress: {
     label:      'In svolgimento',
     accentLine: 'bg-orange-500',
     headerText: 'text-orange-200',

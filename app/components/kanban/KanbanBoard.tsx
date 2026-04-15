@@ -14,14 +14,14 @@ import type { Operator } from '@/lib/team'
 
 type Columns = Record<KanbanStatus, Message[]>
 
-const KANBAN_STATUSES: KanbanStatus[] = ['unread', 'read', 'replied']
+const KANBAN_STATUSES: KanbanStatus[] = ['arrived', 'in_progress', 'replied']
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function groupByStatus(messages: Message[]): Columns {
-  const cols: Columns = { unread: [], read: [], replied: [] }
+  const cols: Columns = { arrived: [], in_progress: [], replied: [] }
   for (const msg of messages) {
-    if (msg.status === 'unread' || msg.status === 'read' || msg.status === 'replied') {
+    if (msg.status === 'arrived' || msg.status === 'in_progress' || msg.status === 'replied') {
       cols[msg.status].push(msg)
     }
   }
@@ -80,9 +80,9 @@ export function KanbanBoard({
     }
 
     return {
-      unread:  columns.unread.filter(matches),
-      read:    columns.read.filter(matches),
-      replied: columns.replied.filter(matches),
+      arrived:     columns.arrived.filter(matches),
+      in_progress: columns.in_progress.filter(matches),
+      replied:     columns.replied.filter(matches),
     }
   }, [columns, filters, myMessagesOnly, currentUserEmail])
 
@@ -90,7 +90,7 @@ export function KanbanBoard({
   const filteredTotal = Object.values(filteredColumns).reduce((sum, col) => sum + col.length, 0)
 
   const stats = useMemo((): DashboardStats => {
-    const all = [...columns.unread, ...columns.read, ...columns.replied]
+    const all = [...columns.arrived, ...columns.in_progress, ...columns.replied]
     const now = Date.now()
 
     // 1. Received today (since midnight local time)
@@ -114,8 +114,8 @@ export function KanbanBoard({
           )
         : 0
 
-    // 4. High-priority unread
-    const highPriorityUnread = columns.unread.filter(
+    // 4. High-priority arrived (not yet handled)
+    const highPriorityUnread = columns.arrived.filter(
       (m) => m.priority === 'high',
     ).length
 
@@ -217,9 +217,9 @@ export function KanbanBoard({
 
           {/* Stats chips */}
           <div className="hidden items-center gap-2 sm:flex">
-            <Chip label="Arrivati"       count={filteredColumns.unread.length}  color="blue" />
-            <Chip label="In svolgimento" count={filteredColumns.read.length}    color="amber" />
-            <Chip label="Conclusi"       count={filteredColumns.replied.length} color="emerald" />
+            <Chip label="Arrivati"       count={filteredColumns.arrived.length}     color="blue" />
+            <Chip label="In svolgimento" count={filteredColumns.in_progress.length} color="amber" />
+            <Chip label="Conclusi"       count={filteredColumns.replied.length}     color="emerald" />
           </div>
         </div>
       </header>

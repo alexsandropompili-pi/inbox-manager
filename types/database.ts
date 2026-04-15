@@ -19,8 +19,8 @@ export interface EmailAccount {
   created_at: string
 }
 
-export type MessageStatus = 'unread' | 'read' | 'replied' | 'archived'
-export type KanbanStatus = Extract<MessageStatus, 'unread' | 'read' | 'replied'>
+export type MessageStatus = 'arrived' | 'in_progress' | 'replied' | 'archived'
+export type KanbanStatus = Extract<MessageStatus, 'arrived' | 'in_progress' | 'replied'>
 export type MessagePriority = 'high' | 'medium' | 'low'
 export type MessageChannel = 'email' | 'whatsapp'
 

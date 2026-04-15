@@ -96,7 +96,7 @@ export async function updateMessage(
 }
 
 export async function markAsRead(id: string): Promise<Message> {
-  return updateMessage(id, { status: 'read' })
+  return updateMessage(id, { status: 'in_progress' })
 }
 
 export async function markAsReplied(id: string): Promise<Message> {
