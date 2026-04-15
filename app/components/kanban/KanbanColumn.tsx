@@ -6,7 +6,7 @@ import { MessageCard } from './MessageCard'
 
 interface ColumnConfig {
   label: string
-  headerBg: string
+  accentLine: string
   headerText: string
   countBg: string
   countText: string
@@ -16,27 +16,27 @@ interface ColumnConfig {
 export const COLUMN_CONFIG: Record<KanbanStatus, ColumnConfig> = {
   unread: {
     label:      'Arrivato',
-    headerBg:   'bg-blue-50',
-    headerText: 'text-blue-800',
-    countBg:    'bg-blue-100',
-    countText:  'text-blue-700',
-    dropRing:   'ring-2 ring-blue-400 bg-blue-50/50',
+    accentLine: 'bg-blue-500',
+    headerText: 'text-blue-200',
+    countBg:    'bg-blue-500/20 border border-blue-500/30',
+    countText:  'text-blue-300',
+    dropRing:   'ring-2 ring-blue-500/40 bg-blue-500/5',
   },
   read: {
     label:      'In svolgimento',
-    headerBg:   'bg-amber-50',
-    headerText: 'text-amber-800',
-    countBg:    'bg-amber-100',
-    countText:  'text-amber-700',
-    dropRing:   'ring-2 ring-amber-400 bg-amber-50/50',
+    accentLine: 'bg-orange-500',
+    headerText: 'text-orange-200',
+    countBg:    'bg-orange-500/20 border border-orange-500/30',
+    countText:  'text-orange-300',
+    dropRing:   'ring-2 ring-orange-500/40 bg-orange-500/5',
   },
   replied: {
     label:      'Concluso',
-    headerBg:   'bg-emerald-50',
-    headerText: 'text-emerald-800',
-    countBg:    'bg-emerald-100',
-    countText:  'text-emerald-700',
-    dropRing:   'ring-2 ring-emerald-400 bg-emerald-50/50',
+    accentLine: 'bg-emerald-500',
+    headerText: 'text-emerald-200',
+    countBg:    'bg-emerald-500/20 border border-emerald-500/30',
+    countText:  'text-emerald-300',
+    dropRing:   'ring-2 ring-emerald-500/40 bg-emerald-500/5',
   },
 }
 
@@ -63,7 +63,6 @@ export function KanbanColumn({ status, messages, pendingIds, onDrop, onSelectMes
   }
 
   function handleDragLeave(e: React.DragEvent<HTMLDivElement>) {
-    // Only clear when leaving the column entirely (not entering a child)
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setIsDragOver(false)
     }
@@ -85,16 +84,19 @@ export function KanbanColumn({ status, messages, pendingIds, onDrop, onSelectMes
   }
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-3">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.06] bg-zinc-950/50">
+      {/* Colored accent line */}
+      <div className={['h-[3px] w-full shrink-0', config.accentLine].join(' ')} />
+
       {/* Column header */}
-      <div className={['flex items-center justify-between rounded-xl px-4 py-3', config.headerBg].join(' ')}>
+      <div className="flex items-center justify-between px-4 py-3">
         <h2 className={['text-sm font-semibold tracking-wide', config.headerText].join(' ')}>
           {config.label}
         </h2>
         <span
           className={[
-            'flex h-6 min-w-6 items-center justify-center rounded-full px-1.5',
-            'text-xs font-bold tabular-nums',
+            'flex h-5 min-w-5 items-center justify-center rounded-full px-1.5',
+            'text-[11px] font-bold tabular-nums',
             config.countBg,
             config.countText,
           ].join(' ')}
@@ -110,13 +112,13 @@ export function KanbanColumn({ status, messages, pendingIds, onDrop, onSelectMes
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={[
-          'flex flex-col gap-3 rounded-xl p-2 transition-all duration-150',
-          'min-h-32 flex-1',
+          'flex flex-1 flex-col gap-2.5 rounded-lg p-2.5 transition-all duration-150',
+          'min-h-32',
           isDragOver ? config.dropRing : 'ring-1 ring-transparent',
         ].join(' ')}
       >
         {messages.length === 0 && !isDragOver && (
-          <p className="mt-4 text-center text-xs text-zinc-400">Nessun messaggio</p>
+          <p className="mt-6 text-center text-xs text-zinc-600">Nessun messaggio</p>
         )}
         {messages.map((msg) => (
           <MessageCard

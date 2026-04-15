@@ -12,7 +12,7 @@ export function AppShell({ userEmail, children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-50">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}

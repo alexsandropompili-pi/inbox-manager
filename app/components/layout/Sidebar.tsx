@@ -27,18 +27,11 @@ const PATHS = {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function SectionLabel({ label, isOpen }: { label: string; isOpen: boolean }) {
+function SectionLabel({ label }: { label: string }) {
   return (
-    <div
-      className={[
-        'overflow-hidden whitespace-nowrap transition-[max-height,opacity] duration-200',
-        isOpen ? 'max-h-8 opacity-100' : 'max-h-0 opacity-0',
-      ].join(' ')}
-    >
-      <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-        {label}
-      </p>
-    </div>
+    <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
+      {label}
+    </p>
   )
 }
 
@@ -46,39 +39,29 @@ function NavItem({
   href,
   iconPath,
   label,
-  isOpen,
   isActive,
   badge,
 }: {
   href: string
   iconPath: string
   label: string
-  isOpen: boolean
   isActive: boolean
   badge?: string
 }) {
   return (
     <Link
       href={href}
-      title={!isOpen ? label : undefined}
       className={[
-        'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-150',
+        'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150',
         isActive
-          ? 'bg-white/10 text-white'
+          ? 'bg-blue-500/15 text-blue-200 shadow-sm'
           : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-100',
       ].join(' ')}
     >
       <Icon path={iconPath} className="h-[18px] w-[18px] shrink-0" />
-      <span
-        className={[
-          'overflow-hidden whitespace-nowrap font-medium transition-[max-width,opacity] duration-300',
-          isOpen ? 'max-w-[180px] opacity-100' : 'max-w-0 opacity-0',
-        ].join(' ')}
-      >
-        {label}
-      </span>
-      {badge && isOpen && (
-        <span className="ml-auto rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400">
+      <span className="overflow-hidden whitespace-nowrap font-medium">{label}</span>
+      {badge && (
+        <span className="ml-auto rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[10px] font-semibold text-zinc-500 ring-1 ring-inset ring-white/10">
           {badge}
         </span>
       )}
@@ -91,47 +74,32 @@ function ChannelItem({
   initial,
   label,
   connected,
-  isOpen,
 }: {
   color: string
   initial: string
   label: string
   connected: boolean
-  isOpen: boolean
 }) {
   return (
-    <div
-      title={!isOpen ? `${label} — ${connected ? 'Connesso' : 'Non connesso'}` : undefined}
-      className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-zinc-400"
-    >
-      {/* Channel avatar */}
+    <div className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-zinc-400">
       <div className={`relative flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md text-[9px] font-bold text-white ${color}`}>
         {initial}
         <span
           className={[
             'absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-zinc-900',
-            connected ? 'bg-emerald-400' : 'bg-zinc-600',
+            connected ? 'bg-emerald-400' : 'bg-zinc-700',
           ].join(' ')}
         />
       </div>
+      <span className="overflow-hidden whitespace-nowrap font-medium">{label}</span>
       <span
         className={[
-          'overflow-hidden whitespace-nowrap font-medium transition-[max-width,opacity] duration-300',
-          isOpen ? 'max-w-[120px] opacity-100' : 'max-w-0 opacity-0',
+          'ml-auto shrink-0 text-[10px] font-medium',
+          connected ? 'text-emerald-400' : 'text-zinc-700',
         ].join(' ')}
       >
-        {label}
+        {connected ? 'Attivo' : 'Off'}
       </span>
-      {isOpen && (
-        <span
-          className={[
-            'ml-auto shrink-0 text-[10px] font-medium',
-            connected ? 'text-emerald-500' : 'text-zinc-600',
-          ].join(' ')}
-        >
-          {connected ? 'Attivo' : 'Off'}
-        </span>
-      )}
     </div>
   )
 }
@@ -141,34 +109,24 @@ function TeamMember({
   color,
   name,
   online,
-  isOpen,
 }: {
   initials: string
   color: string
   name: string
   online: boolean
-  isOpen: boolean
 }) {
   return (
-    <div
-      title={!isOpen ? name : undefined}
-      className="flex items-center gap-3 rounded-xl px-3 py-2"
-    >
+    <div className="flex items-center gap-3 rounded-xl px-3 py-2">
       <div className={`relative flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white ${color}`}>
         {initials}
         <span
           className={[
             'absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-zinc-900',
-            online ? 'bg-emerald-400' : 'bg-zinc-600',
+            online ? 'bg-emerald-400' : 'bg-zinc-700',
           ].join(' ')}
         />
       </div>
-      <span
-        className={[
-          'overflow-hidden whitespace-nowrap text-sm font-medium text-zinc-400 transition-[max-width,opacity] duration-300',
-          isOpen ? 'max-w-[140px] opacity-100' : 'max-w-0 opacity-0',
-        ].join(' ')}
-      >
+      <span className="overflow-hidden whitespace-nowrap text-sm font-medium text-zinc-400">
         {name}
       </span>
     </div>
@@ -184,8 +142,8 @@ interface Props {
 }
 
 const CHANNELS = [
-  { initial: 'G', color: 'bg-red-500',   label: 'Gmail',    connected: false },
-  { initial: 'O', color: 'bg-blue-600',  label: 'Outlook',  connected: false },
+  { initial: 'G', color: 'bg-red-500',     label: 'Gmail',    connected: false },
+  { initial: 'O', color: 'bg-blue-600',    label: 'Outlook',  connected: false },
   { initial: 'W', color: 'bg-emerald-500', label: 'WhatsApp', connected: false },
 ]
 
@@ -200,107 +158,103 @@ export function Sidebar({ isOpen, onToggle, userEmail }: Props) {
   const userInitial = userEmail.charAt(0).toUpperCase()
 
   return (
-    <aside
-      className={[
-        'relative flex flex-col bg-zinc-900',
-        'overflow-hidden transition-[width] duration-300 ease-in-out',
-        isOpen ? 'w-64' : 'w-[70px]',
-      ].join(' ')}
-    >
-      {/* ── Header: logo + toggle ── */}
-      <div className="flex h-[65px] shrink-0 items-center justify-between border-b border-white/5 px-3">
-        {/* Logo */}
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-xs font-bold text-white">
-            IM
+    <>
+      {/* ── Sidebar panel ── */}
+      <aside
+        className={[
+          'relative h-full flex-shrink-0 overflow-hidden bg-zinc-900',
+          'transition-[width] duration-300 ease-in-out',
+          isOpen ? 'w-64 border-r border-white/[0.04]' : 'w-0 border-r-0',
+        ].join(' ')}
+      >
+        {/* Content: always w-64, clipped by aside's overflow-hidden when closing */}
+        <div className="absolute inset-y-0 left-0 flex w-64 flex-col">
+          {/* Header: logo + toggle */}
+          <div className="flex h-[65px] shrink-0 items-center justify-between border-b border-white/[0.05] px-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-xs font-bold text-white shadow-md shadow-blue-900/40">
+                IM
+              </div>
+              <span className="whitespace-nowrap text-sm font-bold tracking-tight text-white">InboxManager</span>
+            </div>
+            <button
+              onClick={onToggle}
+              title="Chiudi sidebar"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-600 transition-colors hover:bg-white/8 hover:text-zinc-300"
+            >
+              <Icon path={PATHS.chevronLeft} className="h-4 w-4" />
+            </button>
           </div>
-          <span
-            className={[
-              'overflow-hidden whitespace-nowrap text-sm font-bold text-white transition-[max-width,opacity] duration-300',
-              isOpen ? 'max-w-[140px] opacity-100' : 'max-w-0 opacity-0',
-            ].join(' ')}
-          >
-            InboxManager
-          </span>
-        </div>
 
-        {/* Toggle button */}
+          {/* Scrollable nav area */}
+          <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden px-2 py-2">
+            <SectionLabel label="Navigazione" />
+            <NavItem href="/"         iconPath={PATHS.grid}  label="Dashboard"        isActive={pathname === '/'} />
+            <NavItem href="/messages" iconPath={PATHS.inbox} label="Tutti i messaggi" isActive={pathname === '/messages'} />
+            <NavItem href="/stats"    iconPath={PATHS.chart} label="Statistiche"      isActive={pathname === '/stats'} badge="Presto" />
+
+            <SectionLabel label="Canali" />
+            {CHANNELS.map((ch) => (
+              <ChannelItem key={ch.label} {...ch} />
+            ))}
+
+            <SectionLabel label="Team" />
+            {TEAM.map((m) => (
+              <TeamMember key={m.name} {...m} />
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div className="shrink-0 border-t border-white/[0.05] px-2 py-3">
+            <NavItem href="/settings" iconPath={PATHS.cog} label="Impostazioni" isActive={pathname === '/settings'} />
+
+            <div title={userEmail} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5">
+              <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-[9px] font-bold text-white">
+                {userInitial}
+              </div>
+              <span className="overflow-hidden whitespace-nowrap text-xs text-zinc-500">
+                {userEmail}
+              </span>
+            </div>
+
+            <form action={logoutAction} className="mt-0.5">
+              <button
+                type="submit"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-500 transition-colors hover:bg-white/5 hover:text-red-400"
+              >
+                <Icon path={PATHS.logout} className="h-[18px] w-[18px] shrink-0" />
+                <span className="overflow-hidden whitespace-nowrap font-medium">Esci</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Floating tab button — visible only when sidebar is closed ── */}
+      <div
+        className={[
+          'fixed left-0 top-1/2 z-50 -translate-y-1/2',
+          'transition-all duration-300 ease-in-out',
+          isOpen
+            ? 'pointer-events-none opacity-0 -translate-x-2'
+            : 'pointer-events-auto opacity-100 translate-x-0',
+        ].join(' ')}
+      >
         <button
           onClick={onToggle}
-          title={isOpen ? 'Chiudi sidebar' : 'Apri sidebar'}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-white/10 hover:text-zinc-200"
+          title="Apri sidebar"
+          className={[
+            'flex h-12 w-5 items-center justify-center',
+            'rounded-r-xl bg-zinc-800',
+            'border border-l-0 border-white/[0.1]',
+            'text-zinc-500 shadow-xl shadow-black/50',
+            'transition-all duration-200 ease-out',
+            'hover:w-7 hover:bg-zinc-700 hover:text-zinc-100',
+          ].join(' ')}
         >
-          <Icon
-            path={isOpen ? PATHS.chevronLeft : PATHS.chevronRight}
-            className="h-4 w-4"
-          />
+          <Icon path={PATHS.chevronRight} className="h-3.5 w-3.5 shrink-0" />
         </button>
       </div>
-
-      {/* ── Scrollable nav area ── */}
-      <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden px-2 py-2 scrollbar-thin">
-
-        {/* Navigazione */}
-        <SectionLabel label="Navigazione" isOpen={isOpen} />
-        <NavItem href="/"         iconPath={PATHS.grid}  label="Dashboard"        isOpen={isOpen} isActive={pathname === '/'} />
-        <NavItem href="/messages" iconPath={PATHS.inbox} label="Tutti i messaggi" isOpen={isOpen} isActive={pathname === '/messages'} />
-        <NavItem href="/stats"    iconPath={PATHS.chart} label="Statistiche"      isOpen={isOpen} isActive={pathname === '/stats'} badge="Presto" />
-
-        {/* Canali */}
-        <SectionLabel label="Canali" isOpen={isOpen} />
-        {CHANNELS.map((ch) => (
-          <ChannelItem key={ch.label} {...ch} isOpen={isOpen} />
-        ))}
-
-        {/* Team */}
-        <SectionLabel label="Team" isOpen={isOpen} />
-        {TEAM.map((m) => (
-          <TeamMember key={m.name} {...m} isOpen={isOpen} />
-        ))}
-      </div>
-
-      {/* ── Footer: settings + profile + logout ── */}
-      <div className="shrink-0 border-t border-white/5 px-2 py-3">
-        {/* Impostazioni */}
-        <NavItem href="/settings" iconPath={PATHS.cog} label="Impostazioni" isOpen={isOpen} isActive={pathname === '/settings'} />
-
-        {/* Profile row */}
-        <div
-          title={!isOpen ? userEmail : undefined}
-          className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5"
-        >
-          <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white">
-            {userInitial}
-          </div>
-          <span
-            className={[
-              'overflow-hidden whitespace-nowrap text-xs text-zinc-400 transition-[max-width,opacity] duration-300',
-              isOpen ? 'max-w-[140px] opacity-100' : 'max-w-0 opacity-0',
-            ].join(' ')}
-          >
-            {userEmail}
-          </span>
-        </div>
-
-        {/* Logout */}
-        <form action={logoutAction} className="mt-0.5">
-          <button
-            type="submit"
-            title={!isOpen ? 'Esci' : undefined}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-400 transition-colors hover:bg-white/5 hover:text-red-400"
-          >
-            <Icon path={PATHS.logout} className="h-[18px] w-[18px] shrink-0" />
-            <span
-              className={[
-                'overflow-hidden whitespace-nowrap font-medium transition-[max-width,opacity] duration-300',
-                isOpen ? 'max-w-[120px] opacity-100' : 'max-w-0 opacity-0',
-              ].join(' ')}
-            >
-              Esci
-            </span>
-          </button>
-        </form>
-      </div>
-    </aside>
+    </>
   )
 }
