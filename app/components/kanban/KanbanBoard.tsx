@@ -6,6 +6,8 @@ import { KanbanColumn } from './KanbanColumn'
 import { MessageDetail } from '@/app/components/message/MessageDetail'
 import { SearchBar, DEFAULT_FILTERS } from './SearchBar'
 import type { Filters } from './SearchBar'
+import { StatsRow } from './StatsRow'
+import type { DashboardStats } from './StatsRow'
 import { moveMessageAction } from '@/app/actions/messages'
 
 type Columns = Record<KanbanStatus, Message[]>
@@ -234,8 +236,41 @@ export function KanbanBoard({ initialMessages }: Props) {
     }
   }, [columns, filters])
 
-  const totalMessages   = Object.values(columns).reduce((sum, col) => sum + col.length, 0)
-  const filteredTotal   = Object.values(filteredColumns).reduce((sum, col) => sum + col.length, 0)
+  const totalMessages = Object.values(columns).reduce((sum, col) => sum + col.length, 0)
+  const filteredTotal = Object.values(filteredColumns).reduce((sum, col) => sum + col.length, 0)
+
+  const stats = useMemo((): DashboardStats => {
+    const all = [...columns.unread, ...columns.read, ...columns.replied]
+    const now = Date.now()
+
+    // 1. Received today (since midnight local time)
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+    const receivedToday = all.filter(
+      (m) => new Date(m.received_at) >= startOfToday,
+    ).length
+
+    // 2. Avg response time — Message has no replied_at field; show demo estimate only
+    const avgResponseHours = isDemo ? 2.4 : null
+
+    // 3. % resolved in last 24 h
+    const last24h = all.filter(
+      (m) => now - new Date(m.received_at).getTime() <= 86_400_000,
+    )
+    const resolvedPct24h =
+      last24h.length > 0
+        ? Math.round(
+            (last24h.filter((m) => m.status === 'replied').length / last24h.length) * 100,
+          )
+        : 0
+
+    // 4. High-priority unread
+    const highPriorityUnread = columns.unread.filter(
+      (m) => m.priority === 'high',
+    ).length
+
+    return { receivedToday, avgResponseHours, resolvedPct24h, highPriorityUnread }
+  }, [columns, isDemo])
 
   function handleDrop(messageId: string, fromStatus: KanbanStatus, toStatus: KanbanStatus) {
     // Optimistic update
@@ -332,6 +367,9 @@ export function KanbanBoard({ initialMessages }: Props) {
         onReset={() => setFilters(DEFAULT_FILTERS)}
         isFiltered={isFiltered}
       />
+
+      {/* Stats widgets */}
+      <StatsRow stats={stats} />
 
       {/* Kanban columns */}
       <main className="flex flex-1 overflow-x-auto px-5 py-5">
