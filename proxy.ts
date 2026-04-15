@@ -27,12 +27,14 @@ export async function proxy(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          // Write refreshed tokens onto both request and response
+          // Write refreshed tokens onto both request and response,
+          // stripping maxAge/expires so they remain session-only cookies.
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           response = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
-          )
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const { maxAge: _maxAge, expires: _expires, ...sessionOptions } = options
+            response.cookies.set(name, value, sessionOptions)
+          })
         },
       },
     },

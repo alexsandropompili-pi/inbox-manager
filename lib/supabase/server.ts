@@ -20,9 +20,12 @@ export async function createClient() {
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
-            )
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // Drop maxAge and expires so the cookie becomes a session cookie
+              // (cleared automatically when the browser is closed).
+              const { maxAge: _maxAge, expires: _expires, ...sessionOptions } = options
+              cookieStore.set(name, value, sessionOptions)
+            })
           } catch {
             // Called from a Server Component — cookies can only be written in
             // Server Actions and Route Handlers. Safe to ignore here.
