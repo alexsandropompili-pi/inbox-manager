@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import type { Message, KanbanStatus, MessagePriority, MessageChannel } from '@/types/database'
 import type { Operator } from '@/lib/team'
 import { findOperator } from '@/lib/team'
+import { computeTokenHealth, type TokenHealth } from '@/lib/logistics/token-health'
 
 const PRIORITY_CONFIG: Record<MessagePriority, { label: string; dot: string; badge: string }> = {
   high:   { label: 'Alta',   dot: 'bg-red-400',     badge: 'bg-red-500/10 text-red-300 ring-red-500/30' },
@@ -150,6 +151,56 @@ function AssigneeDropdown({ assignedTo, operators, onAssign }: AssigneeDropdownP
   )
 }
 
+// ─── Health badge ─────────────────────────────────────────────────────────────
+
+const HEALTH_CONFIG: Record<TokenHealth, {
+  dot:     string
+  ring:    string
+  pulse:   boolean
+  label:   string
+}> = {
+  ok: {
+    dot:   'bg-emerald-400',
+    ring:  'ring-emerald-500/30',
+    pulse: false,
+    label: 'Salute: OK',
+  },
+  warning: {
+    dot:   'bg-amber-400',
+    ring:  'ring-amber-500/40',
+    pulse: false,
+    label: 'In svolgimento da più di 4 ore senza risposta',
+  },
+  critical: {
+    dot:   'bg-red-500',
+    ring:  'ring-red-500/40',
+    pulse: true,
+    label: 'Critico — richiede attenzione immediata',
+  },
+}
+
+function HealthBadge({ health }: { health: TokenHealth }) {
+  const cfg = HEALTH_CONFIG[health]
+  return (
+    <span
+      title={cfg.label}
+      className={[
+        'flex h-4 w-4 shrink-0 items-center justify-center rounded-full',
+        'ring-1 ring-inset bg-zinc-900/60',
+        cfg.ring,
+      ].join(' ')}
+    >
+      <span
+        className={[
+          'h-2 w-2 rounded-full',
+          cfg.dot,
+          cfg.pulse ? 'animate-pulse' : '',
+        ].join(' ')}
+      />
+    </span>
+  )
+}
+
 // ─── MessageCard ──────────────────────────────────────────────────────────────
 
 interface Props {
@@ -164,6 +215,7 @@ interface Props {
 export function MessageCard({ message, columnStatus, isPending, onClick, operators, onAssign }: Props) {
   const priority = message.priority ? PRIORITY_CONFIG[message.priority] : null
   const channel  = message.channel  ? CHANNEL_CONFIG[message.channel]   : CHANNEL_CONFIG.email
+  const health   = computeTokenHealth(message)
 
   function handleDragStart(e: React.DragEvent<HTMLDivElement>) {
     e.dataTransfer.effectAllowed = 'move'
@@ -191,6 +243,14 @@ export function MessageCard({ message, columnStatus, isPending, onClick, operato
     onClick(message)
   }
 
+  // Border + glow classes driven by health state
+  const healthBorderClass =
+    health === 'critical'
+      ? 'border-red-500/70 animate-pulse-red-border'
+      : health === 'warning'
+        ? 'border-amber-500/50'
+        : 'border-white/[0.07]'
+
   return (
     <div
       draggable
@@ -198,15 +258,21 @@ export function MessageCard({ message, columnStatus, isPending, onClick, operato
       onDragEnd={handleDragEndWithFlag}
       onClick={handleClick}
       className={[
-        'group rounded-xl border border-white/[0.07] bg-zinc-800/60 p-4',
+        'group relative rounded-xl border bg-zinc-800/60 p-4',
         'shadow-md shadow-black/40',
         'cursor-grab active:cursor-grabbing select-none',
-        'transition-all duration-200 ease-out',
+        'transition-colors duration-200 ease-out',
+        healthBorderClass,
         isPending
           ? 'opacity-40 pointer-events-none'
-          : 'hover:-translate-y-1 hover:shadow-xl hover:shadow-black/60 hover:border-white/[0.14] hover:bg-zinc-800',
+          : 'hover:-translate-y-1 hover:shadow-xl hover:shadow-black/60 hover:bg-zinc-800',
       ].join(' ')}
     >
+      {/* Health badge — absolute top-left */}
+      <div className="absolute -top-2 -left-2 z-10">
+        <HealthBadge health={health} />
+      </div>
+
       {/* Top row: channel + priority */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <span

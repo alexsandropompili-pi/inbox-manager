@@ -11,6 +11,7 @@ import type { DashboardStats } from './StatsRow'
 import { moveMessageAction, assignMessageAction } from '@/app/actions/messages'
 import { buildOperatorList, findOperator } from '@/lib/team'
 import type { Operator } from '@/lib/team'
+import { countCritical } from '@/lib/logistics/token-health'
 
 type Columns = Record<KanbanStatus, Message[]>
 
@@ -119,7 +120,14 @@ export function KanbanBoard({
       (m) => m.priority === 'high',
     ).length
 
-    return { receivedToday, avgResponseHours, resolvedPct24h, highPriorityUnread }
+    // 5. Critical tokens across all active columns (not archived)
+    const criticalTokens = countCritical([
+      ...columns.arrived,
+      ...columns.in_progress,
+      ...columns.replied,
+    ])
+
+    return { receivedToday, avgResponseHours, resolvedPct24h, highPriorityUnread, criticalTokens }
   }, [columns])
 
   function handleDrop(messageId: string, fromStatus: KanbanStatus, toStatus: KanbanStatus) {
