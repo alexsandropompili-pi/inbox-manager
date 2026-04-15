@@ -100,11 +100,10 @@ interface Props {
   onStatusChange: (messageId: string, newStatus: KanbanStatus) => void
   onAssign:       (messageId: string, assignedTo: string | null) => void
   operators:      Operator[]
-  isDemo?:        boolean
 }
 
 export function MessageDetail({
-  message, onClose, onStatusChange, onAssign, operators, isDemo = false,
+  message, onClose, onStatusChange, onAssign, operators,
 }: Props) {
   const [draft, setDraft] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
@@ -115,11 +114,10 @@ export function MessageDetail({
   const abortRef = useRef<AbortController | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Load history on mount / whenever message changes (skip for demo — IDs are not valid UUIDs)
+  // Load history on mount / whenever message changes
   useEffect(() => {
-    if (isDemo) return
     getResponseHistoryAction(message.id).then(setHistory).catch(console.error)
-  }, [message.id, isDemo])
+  }, [message.id])
 
   // Auto-resize textarea as content grows
   useEffect(() => {
@@ -137,10 +135,6 @@ export function MessageDetail({
   }, [])
 
   async function handleGenerate() {
-    if (isDemo) {
-      setDraft('Questo è un messaggio demo. Collega il tuo account email per generare risposte AI reali.')
-      return
-    }
     if (isStreaming) {
       abortRef.current?.abort()
       return
@@ -194,13 +188,6 @@ export function MessageDetail({
   function handleConfirm() {
     const mode = confirmMode
     setConfirmMode(null)
-
-    // Demo mode: update UI state only, skip all server actions (IDs are not valid UUIDs)
-    if (isDemo) {
-      setDraft('')
-      if (mode === 'approve') onStatusChange(message.id, 'read')
-      return
-    }
 
     startTransition(async () => {
       try {
