@@ -23,6 +23,16 @@ export type MessageStatus = 'arrived' | 'in_progress' | 'replied' | 'archived'
 export type KanbanStatus = Extract<MessageStatus, 'arrived' | 'in_progress' | 'replied'>
 export type MessagePriority = 'high' | 'medium' | 'low'
 export type MessageChannel = 'email' | 'whatsapp'
+export type MessageSettore = 'Traffico' | 'Magazzino' | 'Amministrazione'
+
+export interface DatiEstratti {
+  targhe?: string[]
+  numeri_spedizione?: string[]
+  date_consegna?: string[]
+  quantita?: Array<{ prodotto: string; valore: number; unita: string }>
+  prodotti?: string[]
+  [key: string]: Json | undefined
+}
 
 export interface Message {
   id: string
@@ -43,6 +53,8 @@ export interface Message {
   notion_1: string | null
   notion_2: string | null
   notion_3: string | null
+  settore: MessageSettore | null
+  dati_estratti: DatiEstratti | null
   received_at: string
   created_at: string
 }
@@ -68,7 +80,7 @@ export type EmailAccountInsert = Omit<EmailAccount, 'id' | 'created_at'> & {
   id?: string
 }
 
-export type MessageInsert = Omit<Message, 'id' | 'created_at' | 'priority' | 'channel' | 'token_code' | 'notion_1' | 'notion_2' | 'notion_3'> & {
+export type MessageInsert = Omit<Message, 'id' | 'created_at' | 'priority' | 'channel' | 'token_code' | 'notion_1' | 'notion_2' | 'notion_3' | 'settore' | 'dati_estratti'> & {
   id?: string
   priority?: MessagePriority | null
   channel?: MessageChannel | null
@@ -76,6 +88,8 @@ export type MessageInsert = Omit<Message, 'id' | 'created_at' | 'priority' | 'ch
   notion_1?: string | null
   notion_2?: string | null
   notion_3?: string | null
+  settore?: MessageSettore | null
+  dati_estratti?: DatiEstratti | null
 }
 
 export type AiResponseInsert = Omit<AiResponse, 'id' | 'created_at'> & {
