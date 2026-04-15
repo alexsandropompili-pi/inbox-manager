@@ -39,6 +39,10 @@ export interface Message {
   priority: MessagePriority | null
   channel: MessageChannel | null
   assigned_to: string | null
+  token_code: string | null
+  notion_1: string | null
+  notion_2: string | null
+  notion_3: string | null
   received_at: string
   created_at: string
 }
@@ -64,10 +68,14 @@ export type EmailAccountInsert = Omit<EmailAccount, 'id' | 'created_at'> & {
   id?: string
 }
 
-export type MessageInsert = Omit<Message, 'id' | 'created_at' | 'priority' | 'channel'> & {
+export type MessageInsert = Omit<Message, 'id' | 'created_at' | 'priority' | 'channel' | 'token_code' | 'notion_1' | 'notion_2' | 'notion_3'> & {
   id?: string
   priority?: MessagePriority | null
   channel?: MessageChannel | null
+  token_code?: string | null
+  notion_1?: string | null
+  notion_2?: string | null
+  notion_3?: string | null
 }
 
 export type AiResponseInsert = Omit<AiResponse, 'id' | 'created_at'> & {

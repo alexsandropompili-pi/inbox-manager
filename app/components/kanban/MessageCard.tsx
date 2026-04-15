@@ -238,6 +238,13 @@ export function MessageCard({ message, columnStatus, isPending, onClick, operato
         {message.subject}
       </p>
 
+      {/* Logistics token code */}
+      {message.token_code && (
+        <p className="mb-1 font-mono text-[10px] font-semibold tracking-widest text-zinc-500 group-hover:text-zinc-400 transition-colors">
+          {message.token_code}
+        </p>
+      )}
+
       {/* Sender */}
       <p className="mb-3 truncate text-xs text-zinc-500">
         {message.from_name

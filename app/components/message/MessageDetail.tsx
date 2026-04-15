@@ -289,6 +289,40 @@ export function MessageDetail({
             </dl>
           </section>
 
+          {/* Logistics Token */}
+          {message.token_code && (
+            <section>
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Logistics Token
+              </h3>
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                <p className="mb-3 font-mono text-base font-bold tracking-widest text-zinc-800">
+                  {message.token_code}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {message.notion_1 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-200">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
+                      {message.notion_1}
+                    </span>
+                  )}
+                  {message.notion_2 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
+                      {message.notion_2}
+                    </span>
+                  )}
+                  {message.notion_3 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-200">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
+                      {message.notion_3}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Assignment */}
           <section>
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
