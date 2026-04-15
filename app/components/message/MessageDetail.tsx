@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import type { Message, KanbanStatus, AiResponse, MessagePriority, MessageChannel } from '@/types/database'
+import type { Operator } from '@/lib/team'
+import { findOperator } from '@/lib/team'
 import { ConfirmDialog } from './ConfirmDialog'
 import {
   getResponseHistoryAction,
@@ -93,13 +95,17 @@ function HistoryItem({ item }: { item: AiResponse }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface Props {
-  message: Message
-  onClose: () => void
+  message:        Message
+  onClose:        () => void
   onStatusChange: (messageId: string, newStatus: KanbanStatus) => void
-  isDemo?: boolean
+  onAssign:       (messageId: string, assignedTo: string | null) => void
+  operators:      Operator[]
+  isDemo?:        boolean
 }
 
-export function MessageDetail({ message, onClose, onStatusChange, isDemo = false }: Props) {
+export function MessageDetail({
+  message, onClose, onStatusChange, onAssign, operators, isDemo = false,
+}: Props) {
   const [draft, setDraft] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [history, setHistory] = useState<AiResponse[]>([])
@@ -281,6 +287,63 @@ export function MessageDetail({ message, onClose, onStatusChange, isDemo = false
               <dt className="font-medium text-zinc-500">Oggetto</dt>
               <dd className="text-zinc-800 font-medium">{message.subject}</dd>
             </dl>
+          </section>
+
+          {/* Assignment */}
+          <section>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              Assegna a
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {operators.map((op) => {
+                const isSelected = message.assigned_to === op.id
+                return (
+                  <button
+                    key={op.id}
+                    type="button"
+                    onClick={() => onAssign(message.id, isSelected ? null : op.id)}
+                    className={[
+                      'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium',
+                      'border transition-all duration-150',
+                      isSelected
+                        ? 'border-blue-500/50 bg-blue-500/10 text-blue-200'
+                        : 'border-zinc-700 bg-zinc-800/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200',
+                    ].join(' ')}
+                  >
+                    <span
+                      className={[
+                        'flex h-5 w-5 items-center justify-center rounded-full',
+                        'text-[9px] font-bold text-white',
+                        op.color,
+                      ].join(' ')}
+                    >
+                      {op.initials}
+                    </span>
+                    {op.name}
+                    {isSelected && (
+                      <svg className="ml-0.5 h-3.5 w-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    )}
+                  </button>
+                )
+              })}
+              {message.assigned_to && (
+                <button
+                  type="button"
+                  onClick={() => onAssign(message.id, null)}
+                  className="flex items-center gap-1.5 rounded-lg border border-zinc-700/50 px-3 py-2 text-xs text-zinc-600 transition-colors hover:border-zinc-600 hover:text-zinc-400"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Rimuovi
+                </button>
+              )}
+            </div>
+            {!message.assigned_to && (
+              <p className="mt-2 text-xs text-zinc-600">Nessun operatore assegnato</p>
+            )}
           </section>
 
           {/* Message body */}

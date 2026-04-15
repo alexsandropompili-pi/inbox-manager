@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Message, KanbanStatus } from '@/types/database'
+import type { Operator } from '@/lib/team'
 import { MessageCard } from './MessageCard'
 
 interface ColumnConfig {
@@ -46,9 +47,13 @@ interface Props {
   pendingIds: Set<string>
   onDrop: (messageId: string, fromStatus: KanbanStatus, toStatus: KanbanStatus) => void
   onSelectMessage: (message: Message) => void
+  operators: Operator[]
+  onAssign: (messageId: string, assignedTo: string | null) => void
 }
 
-export function KanbanColumn({ status, messages, pendingIds, onDrop, onSelectMessage }: Props) {
+export function KanbanColumn({
+  status, messages, pendingIds, onDrop, onSelectMessage, operators, onAssign,
+}: Props) {
   const [isDragOver, setIsDragOver] = useState(false)
   const config = COLUMN_CONFIG[status]
 
@@ -127,6 +132,8 @@ export function KanbanColumn({ status, messages, pendingIds, onDrop, onSelectMes
             columnStatus={status}
             isPending={pendingIds.has(msg.id)}
             onClick={onSelectMessage}
+            operators={operators}
+            onAssign={onAssign}
           />
         ))}
       </div>

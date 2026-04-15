@@ -38,6 +38,7 @@ export interface Message {
   status: MessageStatus
   priority: MessagePriority | null
   channel: MessageChannel | null
+  assigned_to: string | null
   received_at: string
   created_at: string
 }

@@ -4,7 +4,11 @@ import { AppShell } from '@/app/components/layout/AppShell'
 import { KanbanBoard } from '@/app/components/kanban/KanbanBoard'
 import type { Message } from '@/types/database'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const supabase = await createClient()
 
   const {
@@ -22,10 +26,16 @@ export default async function DashboardPage() {
   }
 
   const messages = (data ?? []) as Message[]
+  const { mine } = await searchParams
+  const myMessagesOnly = mine === '1'
 
   return (
     <AppShell userEmail={user.email ?? ''}>
-      <KanbanBoard initialMessages={messages} />
+      <KanbanBoard
+        initialMessages={messages}
+        currentUserEmail={user.email ?? ''}
+        myMessagesOnly={myMessagesOnly}
+      />
     </AppShell>
   )
 }

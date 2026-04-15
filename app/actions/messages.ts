@@ -8,3 +8,11 @@ export async function moveMessageAction(id: string, status: KanbanStatus): Promi
   await updateMessage(id, { status })
   revalidatePath('/')
 }
+
+export async function assignMessageAction(
+  id: string,
+  assignedTo: string | null,
+): Promise<void> {
+  await updateMessage(id, { assigned_to: assignedTo })
+  revalidatePath('/')
+}

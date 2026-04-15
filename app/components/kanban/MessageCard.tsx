@@ -1,7 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { Message, KanbanStatus, MessagePriority, MessageChannel } from '@/types/database'
+import type { Operator } from '@/lib/team'
+import { findOperator } from '@/lib/team'
 
 const PRIORITY_CONFIG: Record<MessagePriority, { label: string; dot: string; badge: string }> = {
   high:   { label: 'Alta',   dot: 'bg-red-400',     badge: 'bg-red-500/10 text-red-300 ring-red-500/30' },
@@ -23,14 +25,143 @@ function formatDate(iso: string): string {
   }).format(new Date(iso))
 }
 
-interface Props {
-  message: Message
-  columnStatus: KanbanStatus
-  isPending: boolean
-  onClick: (message: Message) => void
+// ─── AssigneeDropdown ─────────────────────────────────────────────────────────
+
+interface AssigneeDropdownProps {
+  assignedTo:  string | null
+  operators:   Operator[]
+  onAssign:    (assignedTo: string | null) => void
 }
 
-export function MessageCard({ message, columnStatus, isPending, onClick }: Props) {
+function AssigneeDropdown({ assignedTo, operators, onAssign }: AssigneeDropdownProps) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const current = findOperator(assignedTo, operators)
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    function handler(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  function handleSelect(id: string | null) {
+    onAssign(id)
+    setOpen(false)
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative"
+      // Prevent card click (open detail panel) when interacting with this widget
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Avatar / unassigned trigger */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title={current ? `Assegnato a ${current.name}` : 'Assegna operatore'}
+        className={[
+          'flex h-6 w-6 items-center justify-center rounded-full',
+          'text-[9px] font-bold text-white',
+          'ring-1 ring-white/20 transition-all duration-150',
+          'hover:ring-white/50 hover:scale-110',
+          current
+            ? current.color
+            : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-400',
+        ].join(' ')}
+      >
+        {current ? current.initials : (
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+        )}
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div
+          className={[
+            'absolute bottom-full right-0 z-50 mb-2',
+            'min-w-[160px] rounded-xl border border-white/[0.1]',
+            'bg-zinc-800 shadow-xl shadow-black/60',
+            'overflow-hidden',
+          ].join(' ')}
+        >
+          <p className="border-b border-white/[0.06] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            Assegna a
+          </p>
+          <div className="p-1">
+            {operators.map((op) => (
+              <button
+                key={op.id}
+                type="button"
+                onClick={() => handleSelect(op.id)}
+                className={[
+                  'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2',
+                  'text-sm transition-colors duration-100',
+                  assignedTo === op.id
+                    ? 'bg-white/10 text-white'
+                    : 'text-zinc-300 hover:bg-white/5',
+                ].join(' ')}
+              >
+                <span
+                  className={[
+                    'flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
+                    'text-[9px] font-bold text-white',
+                    op.color,
+                  ].join(' ')}
+                >
+                  {op.initials}
+                </span>
+                <span className="truncate font-medium">{op.name}</span>
+                {assignedTo === op.id && (
+                  <svg className="ml-auto h-3.5 w-3.5 shrink-0 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+          {assignedTo && (
+            <div className="border-t border-white/[0.06] p-1">
+              <button
+                type="button"
+                onClick={() => handleSelect(null)}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-300"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Rimuovi assegnazione
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── MessageCard ──────────────────────────────────────────────────────────────
+
+interface Props {
+  message:      Message
+  columnStatus: KanbanStatus
+  isPending:    boolean
+  onClick:      (message: Message) => void
+  operators:    Operator[]
+  onAssign:     (messageId: string, assignedTo: string | null) => void
+}
+
+export function MessageCard({ message, columnStatus, isPending, onClick, operators, onAssign }: Props) {
   const priority = message.priority ? PRIORITY_CONFIG[message.priority] : null
   const channel  = message.channel  ? CHANNEL_CONFIG[message.channel]   : CHANNEL_CONFIG.email
 
@@ -114,13 +245,21 @@ export function MessageCard({ message, columnStatus, isPending, onClick }: Props
           : message.from_email}
       </p>
 
-      {/* Date */}
-      {/* suppressHydrationWarning: Intl.DateTimeFormat uses the local timezone on
-          the client but UTC on the server, so the formatted string intentionally
-          differs until React hydrates and re-renders with the correct timezone. */}
-      <p className="text-xs text-zinc-600" suppressHydrationWarning>
-        {formatDate(message.received_at)}
-      </p>
+      {/* Footer: date + assignee */}
+      <div className="flex items-center justify-between gap-2">
+        {/* suppressHydrationWarning: Intl.DateTimeFormat uses the local timezone on
+            the client but UTC on the server, so the formatted string intentionally
+            differs until React hydrates and re-renders with the correct timezone. */}
+        <p className="text-xs text-zinc-600" suppressHydrationWarning>
+          {formatDate(message.received_at)}
+        </p>
+
+        <AssigneeDropdown
+          assignedTo={message.assigned_to}
+          operators={operators}
+          onAssign={(assignedTo) => onAssign(message.id, assignedTo)}
+        />
+      </div>
     </div>
   )
 }

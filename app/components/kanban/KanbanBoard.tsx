@@ -8,7 +8,9 @@ import { SearchBar, DEFAULT_FILTERS } from './SearchBar'
 import type { Filters } from './SearchBar'
 import { StatsRow } from './StatsRow'
 import type { DashboardStats } from './StatsRow'
-import { moveMessageAction } from '@/app/actions/messages'
+import { moveMessageAction, assignMessageAction } from '@/app/actions/messages'
+import { buildOperatorList, findOperator } from '@/lib/team'
+import type { Operator } from '@/lib/team'
 
 type Columns = Record<KanbanStatus, Message[]>
 
@@ -32,6 +34,7 @@ const DEMO_MESSAGES: Message[] = [
     status: 'unread',
     priority: 'high',
     channel: 'email',
+    assigned_to: 'sofia.b@team.dev',
     received_at: '2026-04-15T09:14:00.000Z',
     created_at: '2026-04-15T09:14:00.000Z',
   },
@@ -49,6 +52,7 @@ const DEMO_MESSAGES: Message[] = [
     status: 'unread',
     priority: 'high',
     channel: 'whatsapp',
+    assigned_to: 'marco.r@team.dev',
     received_at: '2026-04-15T08:47:00.000Z',
     created_at: '2026-04-15T08:47:00.000Z',
   },
@@ -66,6 +70,7 @@ const DEMO_MESSAGES: Message[] = [
     status: 'unread',
     priority: 'medium',
     channel: 'email',
+    assigned_to: null,
     received_at: '2026-04-14T17:22:00.000Z',
     created_at: '2026-04-14T17:22:00.000Z',
   },
@@ -83,6 +88,7 @@ const DEMO_MESSAGES: Message[] = [
     status: 'unread',
     priority: 'low',
     channel: 'email',
+    assigned_to: null,
     received_at: '2026-04-14T11:05:00.000Z',
     created_at: '2026-04-14T11:05:00.000Z',
   },
@@ -101,6 +107,7 @@ const DEMO_MESSAGES: Message[] = [
     status: 'read',
     priority: 'medium',
     channel: 'email',
+    assigned_to: 'luca.m@team.dev',
     received_at: '2026-04-13T14:30:00.000Z',
     created_at: '2026-04-13T14:30:00.000Z',
   },
@@ -118,6 +125,7 @@ const DEMO_MESSAGES: Message[] = [
     status: 'read',
     priority: 'low',
     channel: 'whatsapp',
+    assigned_to: null,
     received_at: '2026-04-13T10:18:00.000Z',
     created_at: '2026-04-13T10:18:00.000Z',
   },
@@ -135,6 +143,7 @@ const DEMO_MESSAGES: Message[] = [
     status: 'read',
     priority: 'high',
     channel: 'email',
+    assigned_to: 'sofia.b@team.dev',
     received_at: '2026-04-12T16:55:00.000Z',
     created_at: '2026-04-12T16:55:00.000Z',
   },
@@ -153,6 +162,7 @@ const DEMO_MESSAGES: Message[] = [
     status: 'replied',
     priority: 'low',
     channel: 'email',
+    assigned_to: 'marco.r@team.dev',
     received_at: '2026-04-11T09:00:00.000Z',
     created_at: '2026-04-11T09:00:00.000Z',
   },
@@ -170,6 +180,7 @@ const DEMO_MESSAGES: Message[] = [
     status: 'replied',
     priority: 'medium',
     channel: 'email',
+    assigned_to: null,
     received_at: '2026-04-10T13:42:00.000Z',
     created_at: '2026-04-10T13:42:00.000Z',
   },
@@ -188,10 +199,16 @@ function groupByStatus(messages: Message[]): Columns {
 }
 
 interface Props {
-  initialMessages: Message[]
+  initialMessages:  Message[]
+  currentUserEmail: string
+  myMessagesOnly?:  boolean
 }
 
-export function KanbanBoard({ initialMessages }: Props) {
+export function KanbanBoard({
+  initialMessages,
+  currentUserEmail,
+  myMessagesOnly = false,
+}: Props) {
   const seed = initialMessages.length === 0 ? DEMO_MESSAGES : initialMessages
 
   const [columns, setColumns] = useState<Columns>(() => groupByStatus(seed))
@@ -200,6 +217,11 @@ export function KanbanBoard({ initialMessages }: Props) {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
   const [, startTransition] = useTransition()
   const isDemo = initialMessages.length === 0
+
+  const operators: Operator[] = useMemo(
+    () => buildOperatorList(currentUserEmail),
+    [currentUserEmail],
+  )
 
   const isFiltered =
     filters.query !== '' ||
@@ -226,6 +248,7 @@ export function KanbanBoard({ initialMessages }: Props) {
         if (filters.date === '7d'   && ageDays > 7)  return false
         if (filters.date === '30d'  && ageDays > 30) return false
       }
+      if (myMessagesOnly && msg.assigned_to !== currentUserEmail) return false
       return true
     }
 
@@ -234,7 +257,7 @@ export function KanbanBoard({ initialMessages }: Props) {
       read:    columns.read.filter(matches),
       replied: columns.replied.filter(matches),
     }
-  }, [columns, filters])
+  }, [columns, filters, myMessagesOnly, currentUserEmail])
 
   const totalMessages = Object.values(columns).reduce((sum, col) => sum + col.length, 0)
   const filteredTotal = Object.values(filteredColumns).reduce((sum, col) => sum + col.length, 0)
@@ -312,6 +335,33 @@ export function KanbanBoard({ initialMessages }: Props) {
     })
   }
 
+  function handleAssign(messageId: string, assignedTo: string | null) {
+    // Optimistic update
+    setColumns((prev) => {
+      const next = { ...prev }
+      for (const status of KANBAN_STATUSES) {
+        next[status] = prev[status].map((m) =>
+          m.id === messageId ? { ...m, assigned_to: assignedTo } : m,
+        )
+      }
+      return next
+    })
+    // Also keep selectedMessage in sync
+    setSelectedMessage((prev) =>
+      prev?.id === messageId ? { ...prev, assigned_to: assignedTo } : prev,
+    )
+
+    if (isDemo) return
+
+    startTransition(async () => {
+      try {
+        await assignMessageAction(messageId, assignedTo)
+      } catch (err) {
+        console.error('[handleAssign]', err)
+      }
+    })
+  }
+
   function handleMessageStatusChange(messageId: string, newStatus: KanbanStatus) {
     setColumns((prev) => {
       const fromStatus = (Object.keys(prev) as KanbanStatus[]).find((s) =>
@@ -385,6 +435,8 @@ export function KanbanBoard({ initialMessages }: Props) {
               pendingIds={pendingIds}
               onDrop={handleDrop}
               onSelectMessage={setSelectedMessage}
+              operators={operators}
+              onAssign={handleAssign}
             />
           </Fragment>
         ))}
@@ -395,6 +447,8 @@ export function KanbanBoard({ initialMessages }: Props) {
           message={selectedMessage}
           onClose={() => setSelectedMessage(null)}
           onStatusChange={handleMessageStatusChange}
+          onAssign={handleAssign}
+          operators={operators}
           isDemo={isDemo}
         />
       )}
