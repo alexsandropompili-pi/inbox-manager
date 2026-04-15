@@ -26,7 +26,7 @@ export async function lookupSpedizione(numero: string): Promise<Spedizione | nul
   const { data, error } = await db
     .from('spedizioni')
     .select('*')
-    .eq('numero', numero.toUpperCase())
+    .eq('numero_spedizione', numero.toUpperCase())
     .single()
 
   if (error) {
