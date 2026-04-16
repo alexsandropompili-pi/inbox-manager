@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useActionState } from 'react'
+import { useState, useEffect, useActionState } from 'react'
+import { useRouter } from 'next/navigation'
 import { loginAction, registerAction } from '@/app/actions/auth'
+import { createClient } from '@/lib/supabase/client'
 
 // ── Shared style tokens ───────────────────────────────────────────────────────
 
@@ -30,7 +32,6 @@ const BTN_GHOST = 'text-sm text-zinc-500 hover:text-zinc-300 transition-colors'
 const BTN_LINK  = 'text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors'
 
 const ERROR_BOX = 'rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400'
-const INFO_BOX  = 'rounded-lg border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm text-blue-300'
 
 // ── Security questions ────────────────────────────────────────────────────────
 
@@ -43,7 +44,7 @@ const SECURITY_QUESTIONS = [
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Mode = 'login' | 'register' | 'forgot'
-type ForgotStep = 'email' | 'method' | 'security' | 'sms-phone' | 'sms-code' | 'success'
+type ForgotStep = 'email' | 'method' | 'code'
 
 type LoginState    = { error: string } | null
 type RegisterState = { error: string } | { success: true } | null
@@ -243,39 +244,38 @@ function RegisterPanel({
 // ══════════════════════════════════════════════════════════════════════════════
 
 function ForgotPanel({ onSwitch }: { onSwitch: (m: Mode) => void }) {
+  const router = useRouter()
+
   const [step, setStep]           = useState<ForgotStep>('email')
   const [email, setEmail]         = useState('')
-  const [question, setQuestion]   = useState('')
-  const [phone, setPhone]         = useState('')
+  const [method, setMethod]       = useState<'email' | 'sms' | null>(null)
+  const [otpPhone, setOtpPhone]   = useState('') // phone from user_metadata, needed for verifyOtp
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError]         = useState<string | null>(null)
+  const [cooldown, setCooldown]   = useState(0)
+
+  // Countdown timer for "Rinvia codice"
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setTimeout(() => setCooldown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [cooldown])
 
   function clearError() { setError(null) }
+  function startCooldown() { setCooldown(60) }
 
   // ── Step: enter email ───────────────────────────────────────────────────────
   if (step === 'email') {
     async function handleEmail(e: React.FormEvent<HTMLFormElement>) {
       e.preventDefault()
       clearError()
-      const fd = new FormData(e.currentTarget)
-      const enteredEmail = (fd.get('email') as string).trim()
+      const enteredEmail = (new FormData(e.currentTarget).get('email') as string).trim()
       setIsLoading(true)
-
       try {
-        const res = await fetch(`/api/auth/security-question?email=${encodeURIComponent(enteredEmail)}`)
-        const json = await res.json() as { question?: string; error?: string }
-        if (!res.ok) {
-          // If no security question, still allow going to method (SMS-only)
-          if (res.status === 404 && json.error?.includes('Domanda')) {
-            setEmail(enteredEmail)
-            setStep('method')
-            return
-          }
-          setError(json.error ?? 'Errore sconosciuto')
-          return
-        }
+        const res  = await fetch(`/api/auth/check-email?email=${encodeURIComponent(enteredEmail)}`)
+        const json = await res.json() as { exists?: boolean; error?: string }
+        if (!res.ok) { setError(json.error ?? 'Errore sconosciuto'); return }
         setEmail(enteredEmail)
-        setQuestion(json.question!)
         setStep('method')
       } catch {
         setError('Errore di rete')
@@ -311,142 +311,21 @@ function ForgotPanel({ onSwitch }: { onSwitch: (m: Mode) => void }) {
 
   // ── Step: choose method ─────────────────────────────────────────────────────
   if (step === 'method') {
-    return (
-      <div className="flex flex-col gap-4">
-        <h2 className="text-base font-semibold text-white">Come vuoi recuperare l&apos;accesso?</h2>
-        <p className="text-sm text-zinc-500">Scegli il metodo di verifica.</p>
-
-        <div className="flex flex-col gap-2">
-          {question && (
-            <button
-              type="button"
-              onClick={() => setStep('security')}
-              className="flex items-start gap-3 rounded-xl border border-white/10 bg-zinc-800/60 p-4 text-left transition-colors hover:border-blue-500/30 hover:bg-zinc-800"
-            >
-              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15">
-                <svg className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-zinc-100">Domanda di sicurezza</p>
-                <p className="mt-0.5 text-xs text-zinc-500">Rispondi alla domanda impostata durante la registrazione</p>
-              </div>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setStep('sms-phone')}
-            className="flex items-start gap-3 rounded-xl border border-white/10 bg-zinc-800/60 p-4 text-left transition-colors hover:border-blue-500/30 hover:bg-zinc-800"
-          >
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15">
-              <svg className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 8.25h3" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-zinc-100">SMS</p>
-              <p className="mt-0.5 text-xs text-zinc-500">Ricevi un codice via SMS sul numero registrato</p>
-            </div>
-          </button>
-        </div>
-
-        <button type="button" onClick={() => setStep('email')} className={`text-center ${BTN_GHOST}`}>
-          ← Indietro
-        </button>
-      </div>
-    )
-  }
-
-  // ── Step: security question ─────────────────────────────────────────────────
-  if (step === 'security') {
-    async function handleSecurity(e: React.FormEvent<HTMLFormElement>) {
-      e.preventDefault()
+    async function handleMethod(selectedMethod: 'email' | 'sms') {
       clearError()
-      const fd = new FormData(e.currentTarget)
-      const answer      = fd.get('answer')      as string
-      const newPassword = fd.get('newPassword') as string
-      const confirm     = fd.get('confirm')     as string
-
-      if (newPassword !== confirm) { setError('Le password non corrispondono'); return }
-
-      setIsLoading(true)
-      try {
-        const res  = await fetch('/api/auth/verify-security', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, answer, newPassword }),
-        })
-        const json = await res.json() as { success?: boolean; error?: string }
-        if (!res.ok) { setError(json.error ?? 'Errore'); return }
-        setStep('success')
-      } catch {
-        setError('Errore di rete')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    return (
-      <form onSubmit={handleSecurity} className="flex flex-col gap-4">
-        <h2 className="text-base font-semibold text-white">Domanda di sicurezza</h2>
-
-        {error && <p className={ERROR_BOX}>{error}</p>}
-
-        <div className={`${INFO_BOX} text-zinc-300`}>
-          <span className="block text-xs font-medium uppercase tracking-wider text-zinc-500 mb-1">Domanda</span>
-          {question}
-        </div>
-
-        <Field id="sec-answer" label="Risposta">
-          <input id="sec-answer" name="answer" type="text"
-            required placeholder="La tua risposta" className={INPUT} />
-        </Field>
-
-        <div className="border-t border-white/[0.06] pt-4">
-          <p className="mb-3 text-sm font-medium text-zinc-400">Nuova password</p>
-          <div className="flex flex-col gap-3">
-            <Field id="sec-newpw" label="Password">
-              <input id="sec-newpw" name="newPassword" type="password"
-                required minLength={8} placeholder="Almeno 8 caratteri" className={INPUT} />
-            </Field>
-            <Field id="sec-confirm" label="Conferma password">
-              <input id="sec-confirm" name="confirm" type="password"
-                required placeholder="Ripeti la password" className={INPUT} />
-            </Field>
-          </div>
-        </div>
-
-        <button type="submit" disabled={isLoading} className={BTN_PRIMARY(isLoading)}>
-          {isLoading ? 'Verifica…' : 'Verifica e aggiorna password'}
-        </button>
-
-        <button type="button" onClick={() => { clearError(); setStep('method') }} className={`text-center ${BTN_GHOST}`}>
-          ← Indietro
-        </button>
-      </form>
-    )
-  }
-
-  // ── Step: SMS — enter phone ─────────────────────────────────────────────────
-  if (step === 'sms-phone') {
-    async function handleSendOtp(e: React.FormEvent<HTMLFormElement>) {
-      e.preventDefault()
-      clearError()
-      const fd           = new FormData(e.currentTarget)
-      const enteredPhone = (fd.get('phone') as string).trim()
       setIsLoading(true)
       try {
         const res  = await fetch('/api/auth/send-otp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, phone: enteredPhone }),
+          body: JSON.stringify({ email, method: selectedMethod }),
         })
-        const json = await res.json() as { success?: boolean; error?: string }
+        const json = await res.json() as { success?: boolean; phone?: string; error?: string }
         if (!res.ok) { setError(json.error ?? 'Errore'); return }
-        setPhone(enteredPhone)
-        setStep('sms-code')
+        setMethod(selectedMethod)
+        if (json.phone) setOtpPhone(json.phone)
+        startCooldown()
+        setStep('code')
       } catch {
         setError('Errore di rete')
       } finally {
@@ -455,22 +334,146 @@ function ForgotPanel({ onSwitch }: { onSwitch: (m: Mode) => void }) {
     }
 
     return (
-      <form onSubmit={handleSendOtp} className="flex flex-col gap-4">
-        <h2 className="text-base font-semibold text-white">Verifica via SMS</h2>
+      <div className="flex flex-col gap-4">
+        <h2 className="text-base font-semibold text-white">Come vuoi recuperare l&apos;accesso?</h2>
         <p className="text-sm text-zinc-500">
-          Inserisci il numero di telefono registrato. Ti invieremo un codice OTP.
+          Scegli dove ricevere il codice di verifica a 6 cifre.
         </p>
 
         {error && <p className={ERROR_BOX}>{error}</p>}
 
-        <Field id="sms-phone" label="Numero di telefono">
-          <input id="sms-phone" name="phone" type="tel" autoComplete="tel"
-            required placeholder="+39 333 1234567" className={INPUT} />
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={() => handleMethod('email')}
+            className="flex items-start gap-3 rounded-xl border border-white/10 bg-zinc-800/60 p-4 text-left transition-colors hover:border-blue-500/30 hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-lg">
+              📧
+            </div>
+            <div>
+              <p className="text-sm font-medium text-zinc-100">Via email</p>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Inviamo un codice OTP a 6 cifre a{' '}
+                <span className="text-zinc-400">{email}</span>
+              </p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={() => handleMethod('sms')}
+            className="flex items-start gap-3 rounded-xl border border-white/10 bg-zinc-800/60 p-4 text-left transition-colors hover:border-blue-500/30 hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-lg">
+              📱
+            </div>
+            <div>
+              <p className="text-sm font-medium text-zinc-100">Via SMS</p>
+              <p className="mt-0.5 text-xs text-zinc-500">Inviamo un codice OTP al numero salvato sull&apos;account</p>
+            </div>
+          </button>
+        </div>
+
+        <button type="button" onClick={() => { clearError(); setStep('email') }} className={`text-center ${BTN_GHOST}`}>
+          ← Indietro
+        </button>
+      </div>
+    )
+  }
+
+  // ── Step: enter OTP code ────────────────────────────────────────────────────
+  if (step === 'code') {
+    const destination = method === 'email'
+      ? email
+      : otpPhone.replace(/(\+\d{2})\d+(\d{3})/, '$1•••••$2') // mask middle digits
+
+    async function handleVerifyCode(e: React.FormEvent<HTMLFormElement>) {
+      e.preventDefault()
+      clearError()
+      const token = (new FormData(e.currentTarget).get('token') as string).trim()
+      setIsLoading(true)
+      try {
+        const supabase = createClient()
+        const { error: verifyError } = method === 'email'
+          ? await supabase.auth.verifyOtp({ email, token, type: 'email' })
+          : await supabase.auth.verifyOtp({ phone: otpPhone, token, type: 'sms' })
+
+        if (verifyError) { setError('Codice non valido o scaduto'); return }
+        router.push('/reset-password')
+      } catch {
+        setError('Errore di rete')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    async function handleResend() {
+      if (cooldown > 0 || !method) return
+      clearError()
+      setIsLoading(true)
+      try {
+        const res  = await fetch('/api/auth/send-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, method }),
+        })
+        const json = await res.json() as { success?: boolean; error?: string }
+        if (!res.ok) { setError(json.error ?? 'Errore'); return }
+        startCooldown()
+      } catch {
+        setError('Errore di rete')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    return (
+      <form onSubmit={handleVerifyCode} className="flex flex-col gap-4">
+        <h2 className="text-base font-semibold text-white">Inserisci il codice</h2>
+        <p className="text-sm text-zinc-500">
+          Abbiamo inviato un codice a 6 cifre a{' '}
+          <span className="text-zinc-300">{destination}</span>.
+        </p>
+
+        {error && <p className={ERROR_BOX}>{error}</p>}
+
+        <Field id="otp-token" label="Codice OTP">
+          <input
+            id="otp-token"
+            name="token"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            required
+            maxLength={6}
+            placeholder="000000"
+            className={`${INPUT} tracking-widest text-center text-lg font-mono`}
+          />
         </Field>
 
         <button type="submit" disabled={isLoading} className={BTN_PRIMARY(isLoading)}>
-          {isLoading ? 'Invio in corso…' : 'Invia codice SMS'}
+          {isLoading ? 'Verifica…' : 'Verifica codice'}
         </button>
+
+        <div className="text-center">
+          {cooldown > 0 ? (
+            <span className="text-sm text-zinc-500">
+              Rinvia codice in {cooldown}s
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={isLoading}
+              className={BTN_LINK}
+            >
+              Rinvia codice
+            </button>
+          )}
+        </div>
 
         <button type="button" onClick={() => { clearError(); setStep('method') }} className={`text-center ${BTN_GHOST}`}>
           ← Indietro
@@ -479,93 +482,6 @@ function ForgotPanel({ onSwitch }: { onSwitch: (m: Mode) => void }) {
     )
   }
 
-  // ── Step: SMS — enter OTP + new password ────────────────────────────────────
-  if (step === 'sms-code') {
-    async function handleVerifyOtp(e: React.FormEvent<HTMLFormElement>) {
-      e.preventDefault()
-      clearError()
-      const fd          = new FormData(e.currentTarget)
-      const token       = (fd.get('token') as string).trim()
-      const newPassword = fd.get('newPassword') as string
-      const confirm     = fd.get('confirm')     as string
-
-      if (newPassword !== confirm) { setError('Le password non corrispondono'); return }
-
-      setIsLoading(true)
-      try {
-        const res  = await fetch('/api/auth/verify-otp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, phone, token, newPassword }),
-        })
-        const json = await res.json() as { success?: boolean; error?: string }
-        if (!res.ok) { setError(json.error ?? 'Errore'); return }
-        setStep('success')
-      } catch {
-        setError('Errore di rete')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    return (
-      <form onSubmit={handleVerifyOtp} className="flex flex-col gap-4">
-        <h2 className="text-base font-semibold text-white">Inserisci il codice</h2>
-        <p className="text-sm text-zinc-500">
-          Abbiamo inviato un codice a 6 cifre al numero{' '}
-          <span className="text-zinc-300">{phone}</span>.
-        </p>
-
-        {error && <p className={ERROR_BOX}>{error}</p>}
-
-        <Field id="otp-token" label="Codice OTP">
-          <input id="otp-token" name="token" type="text" inputMode="numeric"
-            autoComplete="one-time-code" required maxLength={6}
-            placeholder="000000" className={`${INPUT} tracking-widest text-center text-lg font-mono`} />
-        </Field>
-
-        <div className="border-t border-white/[0.06] pt-4">
-          <p className="mb-3 text-sm font-medium text-zinc-400">Nuova password</p>
-          <div className="flex flex-col gap-3">
-            <Field id="otp-newpw" label="Password">
-              <input id="otp-newpw" name="newPassword" type="password"
-                required minLength={8} placeholder="Almeno 8 caratteri" className={INPUT} />
-            </Field>
-            <Field id="otp-confirm" label="Conferma password">
-              <input id="otp-confirm" name="confirm" type="password"
-                required placeholder="Ripeti la password" className={INPUT} />
-            </Field>
-          </div>
-        </div>
-
-        <button type="submit" disabled={isLoading} className={BTN_PRIMARY(isLoading)}>
-          {isLoading ? 'Verifica…' : 'Verifica e aggiorna password'}
-        </button>
-
-        <button type="button" onClick={() => { clearError(); setStep('sms-phone') }} className={`text-center ${BTN_GHOST}`}>
-          Non hai ricevuto il codice? Riprova
-        </button>
-      </form>
-    )
-  }
-
-  // ── Step: success ───────────────────────────────────────────────────────────
-  return (
-    <div className="flex flex-col items-center gap-4 py-4 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15 ring-1 ring-emerald-500/30">
-        <svg className="h-6 w-6 text-emerald-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-        </svg>
-      </div>
-      <div>
-        <p className="font-medium text-white">Password aggiornata!</p>
-        <p className="mt-1 text-sm text-zinc-500">
-          Puoi ora accedere con la tua nuova password.
-        </p>
-      </div>
-      <button type="button" onClick={() => onSwitch('login')} className={BTN_LINK}>
-        Vai al login
-      </button>
-    </div>
-  )
+  // Fallback (shouldn't be reached)
+  return null
 }
