@@ -51,6 +51,43 @@ export async function resetPasswordAction(
   return { success: true }
 }
 
+// ─── Registration ────────────────────────────────────────────────────────────
+
+type RegisterState = { error: string } | { success: true } | null
+
+export async function registerAction(
+  _prevState: RegisterState,
+  formData: FormData,
+): Promise<RegisterState> {
+  const email             = formData.get('email')             as string
+  const password          = formData.get('password')          as string
+  const nome              = formData.get('nome')              as string
+  const cognome           = formData.get('cognome')           as string
+  const phone             = formData.get('phone')             as string
+  const security_question = formData.get('security_question') as string
+  const security_answer   = (formData.get('security_answer') as string).toLowerCase().trim()
+
+  if (password.length < 8)
+    return { error: 'La password deve essere di almeno 8 caratteri.' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { nome, cognome, phone, security_question, security_answer },
+    },
+  })
+
+  if (error) return { error: error.message }
+
+  // If Supabase returned a session immediately (email confirmation disabled)
+  if (data.session) redirect('/')
+
+  // Otherwise email confirmation is required
+  return { success: true }
+}
+
 export async function updatePasswordAction(
   _prevState: { error: string } | null,
   formData: FormData,
