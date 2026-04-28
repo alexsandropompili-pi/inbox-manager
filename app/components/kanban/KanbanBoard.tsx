@@ -12,6 +12,7 @@ import { moveMessageAction, assignMessageAction } from '@/app/actions/messages'
 import { buildOperatorList, findOperator } from '@/lib/team'
 import type { Operator } from '@/lib/team'
 import { countCritical } from '@/lib/logistics/token-health'
+import { countSlaBreached } from '@/lib/logistics/sla'
 
 type Columns = Record<KanbanStatus, Message[]>
 
@@ -101,8 +102,8 @@ export function KanbanBoard({
       (m) => new Date(m.received_at) >= startOfToday,
     ).length
 
-    // 2. Avg response time — Message has no replied_at field
-    const avgResponseHours = null
+    // 2. SLA breached (active messages only)
+    const slaBreached = countSlaBreached([...columns.arrived, ...columns.in_progress])
 
     // 3. % resolved in last 24 h
     const last24h = all.filter(
@@ -127,7 +128,7 @@ export function KanbanBoard({
       ...columns.replied,
     ])
 
-    return { receivedToday, avgResponseHours, resolvedPct24h, highPriorityUnread, criticalTokens }
+    return { receivedToday, slaBreached, resolvedPct24h, highPriorityUnread, criticalTokens }
   }, [columns])
 
   function handleDrop(messageId: string, fromStatus: KanbanStatus, toStatus: KanbanStatus) {

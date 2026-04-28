@@ -1,10 +1,10 @@
-import { supabase } from '@/lib/supabase'
+import { createServiceClient } from '@/lib/supabase/service'
 import type { Message, MessageInsert, MessageUpdate, MessageStatus } from '@/types/database'
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 export async function getMessages(companyId: string): Promise<Message[]> {
-  const { data, error } = await supabase
+  const { data, error } = await createServiceClient()
     .from('messages')
     .select('*')
     .eq('company_id', companyId)
@@ -15,7 +15,7 @@ export async function getMessages(companyId: string): Promise<Message[]> {
 }
 
 export async function getMessageById(id: string): Promise<Message | null> {
-  const { data, error } = await supabase
+  const { data, error } = await createServiceClient()
     .from('messages')
     .select('*')
     .eq('id', id)
@@ -32,7 +32,7 @@ export async function getMessagesByStatus(
   companyId: string,
   status: MessageStatus,
 ): Promise<Message[]> {
-  const { data, error } = await supabase
+  const { data, error } = await createServiceClient()
     .from('messages')
     .select('*')
     .eq('company_id', companyId)
@@ -46,7 +46,7 @@ export async function getMessagesByStatus(
 export async function getMessagesByEmailAccount(
   emailAccountId: string,
 ): Promise<Message[]> {
-  const { data, error } = await supabase
+  const { data, error } = await createServiceClient()
     .from('messages')
     .select('*')
     .eq('email_account_id', emailAccountId)
@@ -57,7 +57,7 @@ export async function getMessagesByEmailAccount(
 }
 
 export async function getMessageThread(threadId: string): Promise<Message[]> {
-  const { data, error } = await supabase
+  const { data, error } = await createServiceClient()
     .from('messages')
     .select('*')
     .eq('thread_id', threadId)
@@ -70,7 +70,7 @@ export async function getMessageThread(threadId: string): Promise<Message[]> {
 // ─── Write ────────────────────────────────────────────────────────────────────
 
 export async function createMessage(input: MessageInsert): Promise<Message> {
-  const { data, error } = await supabase
+  const { data, error } = await createServiceClient()
     .from('messages')
     .insert(input)
     .select()
@@ -84,7 +84,7 @@ export async function updateMessage(
   id: string,
   updates: MessageUpdate,
 ): Promise<Message> {
-  const { data, error } = await supabase
+  const { data, error } = await createServiceClient()
     .from('messages')
     .update(updates)
     .eq('id', id)
@@ -108,6 +108,6 @@ export async function archiveMessage(id: string): Promise<Message> {
 }
 
 export async function deleteMessage(id: string): Promise<void> {
-  const { error } = await supabase.from('messages').delete().eq('id', id)
+  const { error } = await createServiceClient().from('messages').delete().eq('id', id)
   if (error) throw error
 }

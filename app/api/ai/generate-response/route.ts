@@ -1,13 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { Message, Spedizione } from '@/types/database'
 import { buildSystemDataBlock } from '@/lib/logistics/spedizione-lookup'
+import { queryWikiContext } from '@/lib/kb/query'
 
 const client = new Anthropic()
 
 export async function POST(request: Request) {
   const { message, spedizione }: { message: Message; spedizione?: Spedizione | null } =
     await request.json()
-
+const wikiContext = await queryWikiContext(
+  message.company_id,
+  message.subject,
+  message.body ?? ''
+).catch(() => '')
   const encoder = new TextEncoder()
 
   const readable = new ReadableStream({
@@ -20,12 +25,15 @@ export async function POST(request: Request) {
           'La risposta deve essere pronta per essere inviata direttamente, senza metasegni o placeholder.',
           'Non aggiungere note, istruzioni o commenti — solo il testo della risposta.',
         ]
-
+        if (wikiContext) {
+          systemParts.push('')
+          systemParts.push(wikiContext)
+        }
         if (spedizione) {
           systemParts.push('', buildSystemDataBlock(spedizione))
         }
 
-        const systemPrompt = systemParts.join(' ')
+        const systemPrompt = systemParts.join('\n\n')
 
         // ── User message ───────────────────────────────────────────────────────
         const userLines: string[] = [

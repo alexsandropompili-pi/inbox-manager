@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 // Routes that are accessible without authentication
-const PUBLIC_PATHS = ['/login', '/reset-password', '/api/auth/']
+const PUBLIC_PATHS = ['/login', '/reset-password', '/api/auth/', '/api/kb/', '/api/webhooks/']
 
 /**
  * Next.js 16 Proxy (replaces middleware.ts).

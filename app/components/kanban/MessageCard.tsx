@@ -5,6 +5,7 @@ import type { Message, KanbanStatus, MessagePriority, MessageChannel } from '@/t
 import type { Operator } from '@/lib/team'
 import { findOperator } from '@/lib/team'
 import { computeTokenHealth, type TokenHealth } from '@/lib/logistics/token-health'
+import { SlaChip } from './SlaChip'
 
 const PRIORITY_CONFIG: Record<MessagePriority, { label: string; dot: string; badge: string }> = {
   high:   { label: 'Alta',   dot: 'bg-red-400',     badge: 'bg-red-500/10 text-red-300 ring-red-500/30' },
@@ -318,7 +319,7 @@ export function MessageCard({ message, columnStatus, isPending, onClick, operato
           : message.from_email}
       </p>
 
-      {/* Footer: date + assignee */}
+      {/* Footer: date + SLA + assignee */}
       <div className="flex items-center justify-between gap-2">
         {/* suppressHydrationWarning: Intl.DateTimeFormat uses the local timezone on
             the client but UTC on the server, so the formatted string intentionally
@@ -327,11 +328,14 @@ export function MessageCard({ message, columnStatus, isPending, onClick, operato
           {formatDate(message.received_at)}
         </p>
 
-        <AssigneeDropdown
-          assignedTo={message.assigned_to}
-          operators={operators}
-          onAssign={(assignedTo) => onAssign(message.id, assignedTo)}
-        />
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          {columnStatus !== 'replied' && <SlaChip message={message} />}
+          <AssigneeDropdown
+            assignedTo={message.assigned_to}
+            operators={operators}
+            onAssign={(assignedTo) => onAssign(message.id, assignedTo)}
+          />
+        </div>
       </div>
     </div>
   )

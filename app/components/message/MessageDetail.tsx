@@ -318,7 +318,7 @@ export function MessageDetail({
         if (mode === 'approve') {
           await approveAndSendAction(message.id, message.company_id, draft)
           setDraft('')
-          onStatusChange(message.id, 'in_progress')
+          onStatusChange(message.id, 'replied')
         } else if (mode === 'reject') {
           await rejectResponseAction(message.id, message.company_id, draft)
           setDraft('')

@@ -135,7 +135,63 @@ export type AiResponseUpdate = Partial<Omit<AiResponse, 'id' | 'created_at'>>
 type WithIndex<T> = T & Record<string, unknown>
 
 // ─── Supabase database schema ─────────────────────────────────────────────────
+// ─── Knowledge Base — LLM Wiki ──────────────────────────────────────────────
 
+export type KbRawStatus = 'pending' | 'processing' | 'done' | 'error'
+export type KbPageType  = 'index' | 'schema' | 'page'
+
+export interface KbRawSource {
+  id:             string
+  company_id:     string
+  filename:       string
+  original_name:  string
+  file_type:      string
+  file_size:      number
+  storage_path:   string
+  status:         KbRawStatus
+  pages_created:  number
+  pages_updated:  number
+  error_message:  string | null
+  processed_at:   string | null
+  uploaded_by:    string | null
+  created_at:     string
+}
+
+export interface KbWikiPage {
+  id:          string
+  company_id:  string
+  slug:        string
+  title:       string
+  content:     string
+  page_type:   KbPageType
+  category:    string | null
+  source_ids:  string[]
+  version:     number
+  created_at:  string
+  updated_at:  string
+}
+
+export type KbRawSourceInsert = Omit<KbRawSource, 'id' | 'created_at' | 'pages_created' | 'pages_updated' | 'error_message' | 'processed_at' | 'uploaded_by'> & {
+  id?: string
+  pages_created?: number
+  pages_updated?: number
+  error_message?: string | null
+  processed_at?: string | null
+  uploaded_by?: string | null
+}
+export type KbWikiPageInsert  = Omit<KbWikiPage,  'id' | 'created_at' | 'updated_at' | 'version'> & { id?: string }
+export type KbWikiPageUpdate  = Partial<Omit<KbWikiPage, 'id' | 'company_id' | 'created_at'>>
+
+export interface KbWikiLog {
+  id:         string
+  company_id: string
+  action:     string
+  detail:     string
+  source_id:  string | null
+  page_slug:  string | null
+  created_at: string
+}
+export type KbWikiLogInsert = Omit<KbWikiLog, 'id' | 'created_at'>
 export interface Database {
   public: {
     Tables: {
@@ -167,6 +223,24 @@ export interface Database {
         Row: WithIndex<Spedizione>
         Insert: WithIndex<SpedizioneInsert>
         Update: WithIndex<Partial<SpedizioneInsert>>
+        Relationships: []
+      }
+      kb_raw_sources: {
+        Row:    WithIndex<KbRawSource>
+        Insert: WithIndex<KbRawSourceInsert>
+        Update: WithIndex<Partial<KbRawSourceInsert>>
+        Relationships: []
+      }
+      kb_wiki_pages: {
+        Row:    WithIndex<KbWikiPage>
+        Insert: WithIndex<KbWikiPageInsert>
+        Update: WithIndex<KbWikiPageUpdate>
+        Relationships: []
+      }
+      kb_wiki_log: {
+        Row:    WithIndex<KbWikiLog>
+        Insert: WithIndex<KbWikiLogInsert>
+        Update: WithIndex<Partial<KbWikiLogInsert>>
         Relationships: []
       }
     }

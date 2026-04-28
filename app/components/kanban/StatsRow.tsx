@@ -4,7 +4,7 @@
 
 export interface DashboardStats {
   receivedToday:      number
-  avgResponseHours:   number | null   // null = not computable (no replied_at in schema)
+  slaBreached:        number
   resolvedPct24h:     number
   highPriorityUnread: number
   criticalTokens:     number
@@ -100,11 +100,6 @@ interface Props {
 }
 
 export function StatsRow({ stats }: Props) {
-  const avgDisplay =
-    stats.avgResponseHours === null
-      ? '—'
-      : `${stats.avgResponseHours.toFixed(1)}h`
-
   const cards: CardConfig[] = [
     {
       label:    'Messaggi ricevuti oggi',
@@ -115,12 +110,12 @@ export function StatsRow({ stats }: Props) {
       accent:   'bg-blue-500',
     },
     {
-      label:    'Tempo medio di risposta',
-      value:    avgDisplay,
+      label:    'SLA scaduti',
+      value:    String(stats.slaBreached),
       icon:     <IconClock />,
-      iconBg:   'bg-violet-500/15',
-      iconText: 'text-violet-400',
-      accent:   'bg-violet-500',
+      iconBg:   stats.slaBreached > 0 ? 'bg-red-500/15'    : 'bg-zinc-700/40',
+      iconText: stats.slaBreached > 0 ? 'text-red-400'     : 'text-zinc-500',
+      accent:   stats.slaBreached > 0 ? 'bg-red-500'       : 'bg-zinc-700',
     },
     {
       label:    'Risolti nelle ultime 24 ore',

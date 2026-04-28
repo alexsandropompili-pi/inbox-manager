@@ -1,8 +1,8 @@
-import { supabase } from '@/lib/supabase'
+import { createServiceClient } from '@/lib/supabase/service'
 import type { AiResponse, AiResponseInsert, AiResponseUpdate } from '@/types/database'
 
 export async function getAiResponsesByMessageId(messageId: string): Promise<AiResponse[]> {
-  const { data, error } = await supabase
+  const { data, error } = await createServiceClient()
     .from('ai_responses')
     .select('*')
     .eq('message_id', messageId)
@@ -13,7 +13,7 @@ export async function getAiResponsesByMessageId(messageId: string): Promise<AiRe
 }
 
 export async function createAiResponse(input: AiResponseInsert): Promise<AiResponse> {
-  const { data, error } = await supabase
+  const { data, error } = await createServiceClient()
     .from('ai_responses')
     .insert(input)
     .select()
@@ -27,7 +27,7 @@ export async function updateAiResponse(
   id: string,
   updates: AiResponseUpdate,
 ): Promise<AiResponse> {
-  const { data, error } = await supabase
+  const { data, error } = await createServiceClient()
     .from('ai_responses')
     .update(updates)
     .eq('id', id)

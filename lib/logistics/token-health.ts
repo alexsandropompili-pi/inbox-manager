@@ -16,6 +16,7 @@
  */
 
 import type { Message } from '@/types/database'
+import { computeSla } from './sla'
 
 export type TokenHealth = 'ok' | 'warning' | 'critical'
 
@@ -45,6 +46,13 @@ export function computeTokenHealth(message: Message): TokenHealth {
   if (message.status === 'in_progress') {
     const ageMs = Date.now() - new Date(message.received_at).getTime()
     if (ageMs > IN_PROGRESS_WARNING_MS) return 'warning'
+  }
+
+  // ── Critical/Warning: SLA status ──────────────────────────────────────────
+  if (message.status === 'arrived' || message.status === 'in_progress') {
+    const sla = computeSla(message)
+    if (sla.status === 'breach')  return 'critical'
+    if (sla.status === 'warning') return 'warning'
   }
 
   return 'ok'

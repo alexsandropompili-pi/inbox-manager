@@ -1,0 +1,82 @@
+TARIFFARIO SPEDIZIONI - La Mia Azienda
+Aggiornato: Aprile 2026
+
+=====================================================
+TARIFFE NAZIONALI (Italia)
+=====================================================
+
+Zona A - Nord Italia (Lombardia, Piemonte, Valle d'Aosta, Liguria, Trentino, Veneto, FVG)
+  Fino a 10 kg:     EUR 8,50
+  Da 11 a 30 kg:    EUR 12,00
+  Da 31 a 100 kg:   EUR 18,50
+  Da 101 a 300 kg:  EUR 28,00
+  Oltre 300 kg:     EUR 0,09/kg (minimo EUR 30,00)
+
+Zona B - Centro Italia (Emilia-Romagna, Toscana, Umbria, Marche, Lazio, Abruzzo)
+  Fino a 10 kg:     EUR 10,00
+  Da 11 a 30 kg:    EUR 14,50
+  Da 31 a 100 kg:   EUR 22,00
+  Da 101 a 300 kg:  EUR 34,00
+  Oltre 300 kg:     EUR 0,11/kg (minimo EUR 36,00)
+
+Zona C - Sud Italia e Isole (Campania, Puglia, Basilicata, Calabria, Sicilia, Sardegna)
+  Fino a 10 kg:     EUR 12,00
+  Da 11 a 30 kg:    EUR 17,00
+  Da 31 a 100 kg:   EUR 26,00
+  Da 101 a 300 kg:  EUR 40,00
+  Oltre 300 kg:     EUR 0,13/kg (minimo EUR 44,00)
+
+=====================================================
+TARIFFE INTERNAZIONALI (Europa)
+=====================================================
+
+Fascia 1 - Europa Centrale (Germania, Austria, Svizzera, Francia, Belgio, Paesi Bassi, Lussemburgo)
+  Fino a 10 kg:     EUR 18,00
+  Da 11 a 30 kg:    EUR 28,00
+  Da 31 a 100 kg:   EUR 45,00
+  Da 101 a 300 kg:  EUR 70,00
+  Oltre 300 kg:     EUR 0,22/kg (minimo EUR 75,00)
+
+Fascia 2 - Europa Meridionale (Spagna, Portogallo, Grecia, Slovenia, Croazia)
+  Fino a 10 kg:     EUR 20,00
+  Da 11 a 30 kg:    EUR 32,00
+  Da 31 a 100 kg:   EUR 52,00
+  Da 101 a 300 kg:  EUR 80,00
+  Oltre 300 kg:     EUR 0,25/kg (minimo EUR 85,00)
+
+Fascia 3 - Europa del Nord (Svezia, Norvegia, Danimarca, Finlandia, Irlanda, UK)
+  Fino a 10 kg:     EUR 22,00
+  Da 11 a 30 kg:    EUR 36,00
+  Da 31 a 100 kg:   EUR 58,00
+  Da 101 a 300 kg:  EUR 90,00
+  Oltre 300 kg:     EUR 0,28/kg (minimo EUR 95,00)
+
+=====================================================
+SERVIZI AGGIUNTIVI
+=====================================================
+
+Assicurazione merce:
+  Valore dichiarato fino a EUR 500:    EUR 3,00
+  Valore dichiarato EUR 501-2.000:     EUR 7,00
+  Valore dichiarato EUR 2.001-10.000:  EUR 15,00
+  Oltre EUR 10.000:                    0,15% del valore dichiarato
+
+Consegna urgente (entro 24h, solo Italia):
+  Zona A:  + EUR 12,00
+  Zona B:  + EUR 18,00
+  Zona C:  + EUR 25,00
+
+Ritiro a domicilio (su appuntamento):    EUR 5,00
+Consegna al piano (ogni piano oltre il piano terra):  EUR 3,00/piano
+Gestione documenti ADR (merci pericolose): EUR 20,00
+
+=====================================================
+CONDIZIONI GENERALI
+=====================================================
+
+- I prezzi sono IVA esclusa (aliquota 22%)
+- Peso tassabile: peso reale o peso volumetrico (L x l x h / 4000), il maggiore
+- Tempi di consegna standard: 24-72h per l'Italia, 3-7 giorni per l'Europa
+- In caso di perdita o danneggiamento senza assicurazione: rimborso massimo EUR 50,00
+- Spedizioni accettate dal lunedì al venerdì, ore 08:00 - 17:30
+- Contatto commerciale: commerciale@lamiazienda.it | Tel. 02-1234567
