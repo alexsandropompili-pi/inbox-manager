@@ -42,34 +42,39 @@ export async function getWikiPagesAction(): Promise<KbWikiPage[]> {
 export async function uploadDocumentAction(
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  const file = formData.get('file') as File | null
-  if (!file) return { ok: false, error: 'Nessun file selezionato' }
-  if (!ALLOWED_MIME.includes(file.type))
-    return { ok: false, error: `Formato non supportato: ${file.name}` }
+  try {
+    const file = formData.get('file') as File | null
+    if (!file) return { ok: false, error: 'Nessun file selezionato' }
+    if (!ALLOWED_MIME.includes(file.type))
+      return { ok: false, error: `Formato non supportato: ${file.name}` }
 
-  const db = createServiceClient()
-  const ext = file.name.split('.').pop() ?? 'txt'
-  const storagePath = `${COMPANY_ID}/${Date.now()}-${crypto.randomUUID()}.${ext}`
-  const buffer = Buffer.from(await file.arrayBuffer())
+    const db = createServiceClient()
+    const ext = file.name.split('.').pop() ?? 'txt'
+    const storagePath = `${COMPANY_ID}/${Date.now()}-${crypto.randomUUID()}.${ext}`
+    const buffer = Buffer.from(await file.arrayBuffer())
 
-  const { error: uploadError } = await db.storage
-    .from('kb-raw')
-    .upload(storagePath, buffer, { contentType: file.type })
-  if (uploadError) return { ok: false, error: uploadError.message }
+    const { error: uploadError } = await db.storage
+      .from('kb-raw')
+      .upload(storagePath, buffer, { contentType: file.type })
+    if (uploadError) return { ok: false, error: uploadError.message }
 
-  const { error: dbError } = await db.from('kb_raw_sources').insert({
-    company_id: COMPANY_ID,
-    filename: storagePath,
-    original_name: file.name,
-    file_type: ext,
-    file_size: file.size,
-    storage_path: storagePath,
-    status: 'pending',
-  })
-  if (dbError) return { ok: false, error: dbError.message }
+    const { error: dbError } = await db.from('kb_raw_sources').insert({
+      company_id: COMPANY_ID,
+      filename: storagePath,
+      original_name: file.name,
+      file_type: ext,
+      file_size: file.size,
+      storage_path: storagePath,
+      status: 'pending',
+    })
+    if (dbError) return { ok: false, error: dbError.message }
 
-  revalidatePath('/wiki')
-  return { ok: true }
+    revalidatePath('/wiki')
+    return { ok: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, error: msg }
+  }
 }
 
 export async function processDocumentAction(
