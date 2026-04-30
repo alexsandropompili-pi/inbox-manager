@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, useMemo, useState, useTransition } from 'react'
+import Link from 'next/link'
 import type { Message, KanbanStatus } from '@/types/database'
 import { KanbanColumn } from './KanbanColumn'
 import { MessageDetail } from '@/app/components/message/MessageDetail'
@@ -34,12 +35,14 @@ interface Props {
   initialMessages:  Message[]
   currentUserEmail: string
   myMessagesOnly?:  boolean
+  categoryTitle?:   string
 }
 
 export function KanbanBoard({
   initialMessages,
   currentUserEmail,
   myMessagesOnly = false,
+  categoryTitle,
 }: Props) {
   const [columns, setColumns] = useState<Columns>(() => groupByStatus(initialMessages))
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
@@ -215,13 +218,28 @@ export function KanbanBoard({
       {/* Dashboard header */}
       <header className="shrink-0 border-b border-white/[0.06] bg-zinc-900 px-6 py-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-white">InboxManager</h1>
-            <p className="mt-0.5 text-sm text-zinc-500">
-              {isFiltered
-                ? `${filteredTotal} di ${totalMessages} messaggi`
-                : `${totalMessages} messaggi totali`}
-            </p>
+          <div className="flex items-center gap-3">
+            {categoryTitle && (
+              <Link
+                href="/"
+                className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-400 transition-all hover:border-white/[0.15] hover:text-zinc-100"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                </svg>
+                Dashboard
+              </Link>
+            )}
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-white">
+                {categoryTitle ?? 'InboxManager'}
+              </h1>
+              <p className="mt-0.5 text-sm text-zinc-500">
+                {isFiltered
+                  ? `${filteredTotal} di ${totalMessages} messaggi`
+                  : `${totalMessages} messaggi totali`}
+              </p>
+            </div>
           </div>
 
           {/* Stats chips */}
