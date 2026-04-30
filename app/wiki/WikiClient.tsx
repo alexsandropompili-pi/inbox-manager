@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import {
+  getSourcesAction,
   uploadDocumentAction,
   processDocumentAction,
   deleteSourceAction,
@@ -174,6 +175,8 @@ export function WikiClient({ initialSources, initialPages }: Props) {
         const res = await uploadDocumentAction(fd)
         if (res.ok) {
           flash(`"${file.name}" caricato`)
+          const updated = await getSourcesAction()
+          setSources(updated)
         } else {
           setError(res.error ?? 'Errore caricamento')
         }
