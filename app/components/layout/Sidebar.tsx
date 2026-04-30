@@ -198,7 +198,7 @@ export function Sidebar({ isOpen, onToggle, userEmail }: Props) {
             <NavItem href="/"         iconPath={PATHS.grid}       label="Dashboard"          isActive={dashboardActive} />
             <NavItem href="/?mine=1"  iconPath={PATHS.userCircle} label="I miei messaggi"    isActive={myMessagesActive} />
             <NavItem href="/messages" iconPath={PATHS.inbox}      label="Tutti i messaggi"   isActive={pathname === '/messages'} />
-            <NavItem href="/stats"    iconPath={PATHS.chart}      label="Statistiche"        isActive={pathname === '/stats'} badge="Presto" />
+            <NavItem href="/stats"    iconPath={PATHS.chart}      label="Statistiche"        isActive={pathname === '/stats'} />
             <NavItem href="/wiki"     iconPath={PATHS.book}       label="Wiki aziendale"     isActive={pathname === '/wiki'} />
 
             <SectionLabel label="Canali" />
