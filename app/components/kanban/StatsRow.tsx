@@ -70,7 +70,7 @@ function StatCard({ label, value, icon, iconBg, iconText, accent }: CardConfig) 
     <div
       className={[
         'relative flex flex-1 min-w-0 items-center gap-4 rounded-xl',
-        'border border-white/[0.07] bg-zinc-800/50 px-5 py-4',
+        'border border-gray-200 bg-white px-5 py-4',
         'overflow-hidden',
       ].join(' ')}
     >
@@ -84,10 +84,10 @@ function StatCard({ label, value, icon, iconBg, iconText, accent }: CardConfig) 
 
       {/* Text */}
       <div className="min-w-0">
-        <p className="text-2xl font-bold tabular-nums tracking-tight text-white">
+        <p className="text-2xl font-bold tabular-nums tracking-tight text-gray-900">
           {value}
         </p>
-        <p className="mt-0.5 truncate text-xs text-zinc-500">{label}</p>
+        <p className="mt-0.5 truncate text-xs text-gray-500">{label}</p>
       </div>
     </div>
   )
@@ -113,9 +113,9 @@ export function StatsRow({ stats }: Props) {
       label:    'SLA scaduti',
       value:    String(stats.slaBreached),
       icon:     <IconClock />,
-      iconBg:   stats.slaBreached > 0 ? 'bg-red-500/15'    : 'bg-zinc-700/40',
-      iconText: stats.slaBreached > 0 ? 'text-red-400'     : 'text-zinc-500',
-      accent:   stats.slaBreached > 0 ? 'bg-red-500'       : 'bg-zinc-700',
+      iconBg:   stats.slaBreached > 0 ? 'bg-red-500/15'    : 'bg-gray-100',
+      iconText: stats.slaBreached > 0 ? 'text-red-400'     : 'text-gray-400',
+      accent:   stats.slaBreached > 0 ? 'bg-red-500'       : 'bg-gray-300',
     },
     {
       label:    'Risolti nelle ultime 24 ore',
@@ -139,12 +139,12 @@ export function StatsRow({ stats }: Props) {
       icon:     <IconFire />,
       iconBg:   'bg-orange-500/15',
       iconText: 'text-orange-400',
-      accent:   stats.criticalTokens > 0 ? 'bg-orange-500' : 'bg-zinc-700',
+      accent:   stats.criticalTokens > 0 ? 'bg-orange-500' : 'bg-gray-300',
     },
   ]
 
   return (
-    <div className="shrink-0 border-b border-white/[0.06] bg-zinc-900 px-6 py-4">
+    <div className="shrink-0 border-b border-gray-200 bg-white px-6 py-4">
       <div className="flex gap-3">
         {cards.map((card) => (
           <StatCard key={card.label} {...card} />

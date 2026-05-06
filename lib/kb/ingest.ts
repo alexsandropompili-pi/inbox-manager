@@ -30,7 +30,7 @@ export async function ingestDocument(
       .join('\n\n')
 
     const response = await client.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 8000,
       system: `Sei il gestore del wiki aziendale. Il tuo compito è leggere un nuovo documento e aggiornare il wiki aziendale di conseguenza.
 

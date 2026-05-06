@@ -62,6 +62,7 @@ export interface Message {
   settore: MessageSettore | null
   dati_estratti: DatiEstratti | null
   received_at: string
+  replied_at: string | null
   created_at: string
 }
 
@@ -105,8 +106,9 @@ export type EmailAccountInsert = Omit<EmailAccount, 'id' | 'created_at'> & {
   id?: string
 }
 
-export type MessageInsert = Omit<Message, 'id' | 'created_at' | 'priority' | 'channel' | 'token_code' | 'notion_1' | 'notion_2' | 'notion_3' | 'settore' | 'dati_estratti'> & {
+export type MessageInsert = Omit<Message, 'id' | 'created_at' | 'replied_at' | 'priority' | 'channel' | 'token_code' | 'notion_1' | 'notion_2' | 'notion_3' | 'settore' | 'dati_estratti'> & {
   id?: string
+  replied_at?: string | null
   priority?: MessagePriority | null
   channel?: MessageChannel | null
   token_code?: string | null

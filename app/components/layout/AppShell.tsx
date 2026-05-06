@@ -14,7 +14,7 @@ export function AppShell({ userEmail, children }: Props) {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Suspense required because Sidebar uses useSearchParams */}
-      <Suspense fallback={<div className="w-64 shrink-0 bg-zinc-900" />}>
+      <Suspense fallback={<div className="w-64 shrink-0 bg-white border-r border-gray-200" />}>
         <Sidebar
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen((v) => !v)}

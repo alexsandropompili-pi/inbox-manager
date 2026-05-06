@@ -39,16 +39,16 @@ function formatBytes(n: number) {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    pending:    'bg-amber-500/15 text-amber-300 ring-amber-500/30',
-    processing: 'bg-blue-500/15 text-blue-300 ring-blue-500/30',
-    done:       'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30',
-    error:      'bg-red-500/15 text-red-300 ring-red-500/30',
+    pending:    'bg-amber-50 text-amber-700 ring-amber-200',
+    processing: 'bg-blue-50 text-blue-700 ring-blue-200',
+    done:       'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    error:      'bg-red-50 text-red-700 ring-red-200',
   }
   const label: Record<string, string> = {
     pending: 'In attesa', processing: 'Elaborazione', done: 'Pronto', error: 'Errore',
   }
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${map[status] ?? 'bg-zinc-500/10 text-zinc-400'}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${map[status] ?? 'bg-gray-100 text-gray-500'}`}>
       {label[status] ?? status}
     </span>
   )
@@ -68,11 +68,11 @@ function SourceRow({
   busy: boolean
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-      <Icon d={ICONS.document} className="h-5 w-5 shrink-0 text-zinc-500" />
+    <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+      <Icon d={ICONS.document} className="h-5 w-5 shrink-0 text-gray-400" />
       <div className="flex-1 overflow-hidden">
-        <p className="truncate text-sm font-medium text-zinc-200">{source.original_name}</p>
-        <p className="text-[11px] text-zinc-600">
+        <p className="truncate text-sm font-medium text-gray-800">{source.original_name}</p>
+        <p className="text-[11px] text-gray-400">
           {formatBytes(source.file_size)}
           {source.processed_at && ` · ${new Date(source.processed_at).toLocaleDateString('it-IT')}`}
           {source.pages_created > 0 && ` · ${source.pages_created} pagine create`}
@@ -90,14 +90,14 @@ function SourceRow({
         </button>
       )}
       {source.status === 'error' && source.error_message && (
-        <span className="max-w-[180px] truncate text-[11px] text-red-400" title={source.error_message}>
+        <span className="max-w-[180px] truncate text-[11px] text-red-500" title={source.error_message}>
           {source.error_message}
         </span>
       )}
       <button
         disabled={busy}
         onClick={() => onDelete(source.id)}
-        className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-red-500/10 hover:text-red-400 disabled:opacity-40"
+        className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
         title="Elimina"
       >
         <Icon d={ICONS.trash} className="h-4 w-4" />
@@ -114,27 +114,27 @@ function WikiPageCard({ page, expanded, onToggle }: {
   onToggle: () => void
 }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
       <button
         onClick={onToggle}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition"
+        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition"
       >
-        <Icon d={ICONS.book} className="h-4 w-4 shrink-0 text-blue-400" />
+        <Icon d={ICONS.book} className="h-4 w-4 shrink-0 text-blue-500" />
         <div className="flex-1 overflow-hidden">
-          <p className="truncate text-sm font-medium text-zinc-200">{page.title}</p>
-          <p className="text-[11px] text-zinc-600">
-            {page.category && <span className="mr-2 text-zinc-500">{page.category}</span>}
+          <p className="truncate text-sm font-medium text-gray-800">{page.title}</p>
+          <p className="text-[11px] text-gray-400">
+            {page.category && <span className="mr-2 text-gray-400">{page.category}</span>}
             v{page.version} · {new Date(page.updated_at).toLocaleDateString('it-IT')}
           </p>
         </div>
         <Icon
           d={expanded ? ICONS.x : 'M19.5 8.25l-7.5 7.5-7.5-7.5'}
-          className="h-4 w-4 shrink-0 text-zinc-600"
+          className="h-4 w-4 shrink-0 text-gray-400"
         />
       </button>
       {expanded && (
-        <div className="border-t border-white/[0.05] px-4 py-3">
-          <pre className="whitespace-pre-wrap text-xs leading-relaxed text-zinc-400 font-sans">
+        <div className="border-t border-gray-100 px-4 py-3">
+          <pre className="whitespace-pre-wrap text-xs leading-relaxed text-gray-600 font-sans">
             {page.content}
           </pre>
         </div>
@@ -208,26 +208,26 @@ export function WikiClient({ initialSources, initialPages }: Props) {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto bg-zinc-950 px-6 py-6">
+    <div className="flex flex-1 flex-col overflow-y-auto bg-white px-6 py-6">
       <div className="mx-auto w-full max-w-3xl space-y-8">
 
         {/* Header */}
         <div>
-          <h1 className="text-xl font-bold text-white">Wiki aziendale</h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <h1 className="text-xl font-bold text-gray-900">Wiki aziendale</h1>
+          <p className="mt-1 text-sm text-gray-500">
             Carica documenti per alimentare il wiki. L&apos;AI li elabora e genera pagine di conoscenza usate per le risposte automatiche.
           </p>
         </div>
 
         {/* Feedback */}
         {error && (
-          <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <Icon d={ICONS.x} className="h-4 w-4 shrink-0" />
             {error}
           </div>
         )}
         {successMsg && (
-          <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             <Icon d={ICONS.check} className="h-4 w-4 shrink-0" />
             {successMsg}
           </div>
@@ -235,7 +235,7 @@ export function WikiClient({ initialSources, initialPages }: Props) {
 
         {/* Upload area */}
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-zinc-500">Carica documento</h2>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-gray-400">Carica documento</h2>
           <div
             onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
             onDragLeave={() => setDragging(false)}
@@ -243,21 +243,21 @@ export function WikiClient({ initialSources, initialPages }: Props) {
             className={[
               'flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-10 transition-colors',
               dragging
-                ? 'border-blue-500 bg-blue-500/5'
-                : 'border-white/10 hover:border-white/20',
+                ? 'border-blue-400 bg-blue-50'
+                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50',
             ].join(' ')}
           >
-            <Icon d={ICONS.upload} className="h-8 w-8 text-zinc-600" />
-            <p className="text-sm text-zinc-500">
+            <Icon d={ICONS.upload} className="h-8 w-8 text-gray-300" />
+            <p className="text-sm text-gray-500">
               Trascina qui un file oppure{' '}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="text-blue-400 underline-offset-2 hover:underline"
+                className="text-blue-500 underline-offset-2 hover:underline"
               >
                 sfoglia
               </button>
             </p>
-            <p className="text-[11px] text-zinc-700">PDF, TXT, MD, CSV · max 10 MB</p>
+            <p className="text-[11px] text-gray-400">PDF, TXT, MD, CSV · max 10 MB</p>
             <input
               ref={fileInputRef}
               type="file"
@@ -271,12 +271,12 @@ export function WikiClient({ initialSources, initialPages }: Props) {
 
         {/* Documents list */}
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-zinc-500">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-gray-400">
             Documenti caricati
-            <span className="ml-2 font-normal normal-case tracking-normal text-zinc-700">({sources.length})</span>
+            <span className="ml-2 font-normal normal-case tracking-normal text-gray-400">({sources.length})</span>
           </h2>
           {sources.length === 0 ? (
-            <p className="text-sm text-zinc-700">Nessun documento ancora caricato.</p>
+            <p className="text-sm text-gray-400">Nessun documento ancora caricato.</p>
           ) : (
             <div className="space-y-2">
               {sources.map((s) => (
@@ -294,12 +294,12 @@ export function WikiClient({ initialSources, initialPages }: Props) {
 
         {/* Wiki pages */}
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-zinc-500">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-gray-400">
             Pagine wiki
-            <span className="ml-2 font-normal normal-case tracking-normal text-zinc-700">({pages.length})</span>
+            <span className="ml-2 font-normal normal-case tracking-normal text-gray-400">({pages.length})</span>
           </h2>
           {pages.length === 0 ? (
-            <p className="text-sm text-zinc-700">Nessuna pagina ancora generata. Carica un documento e clicca &ldquo;Elabora&rdquo;.</p>
+            <p className="text-sm text-gray-400">Nessuna pagina ancora generata. Carica un documento e clicca &ldquo;Elabora&rdquo;.</p>
           ) : (
             <div className="space-y-2">
               {pages.map((p) => (

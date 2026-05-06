@@ -12,45 +12,45 @@ export async function getResponseHistoryAction(messageId: string): Promise<AiRes
 }
 
 export async function approveAndSendAction(
-  messageId: string,
+  rootMessageId: string,
+  replyToMessageId: string,
   companyId: string,
   content: string,
 ): Promise<AiResponse> {
-  // Load the original message for reply metadata
-  const message = await getMessageById(messageId)
-  if (!message) throw new Error('Messaggio non trovato')
+  // Load the message to reply to (last in thread, or root if no thread)
+  const replyToMessage = await getMessageById(replyToMessageId)
+  if (!replyToMessage) throw new Error('Messaggio non trovato')
 
   // Load the email account to get the "From" address
   const db = createServiceClient()
   const { data: emailAccount, error: accountError } = await db
     .from('email_accounts')
     .select('email')
-    .eq('id', message.email_account_id)
+    .eq('id', replyToMessage.email_account_id)
     .maybeSingle()
 
   if (accountError || !emailAccount) {
     throw new Error('Account email mittente non trovato')
   }
 
-  // Send via Postmark — POSTMARK_REPLY_FROM overrides the account email
-  // (useful when the inbound address differs from the verified sender signature)
   await sendReply({
     from: process.env.POSTMARK_REPLY_FROM ?? emailAccount.email,
-    to: message.from_email,
-    subject: message.subject,
+    to: replyToMessage.from_email,
+    subject: replyToMessage.subject,
     body: content,
-    inReplyTo: message.external_message_id,
+    inReplyTo: replyToMessage.external_message_id,
   })
 
-  // Persist the sent response and update message status
+  // Persist response linked to the specific message we replied to
   const aiResponse = await createAiResponse({
-    message_id: messageId,
+    message_id: replyToMessageId,
     company_id: companyId,
     content,
     status: 'sent',
   })
 
-  await markAsReplied(messageId)
+  // Mark root as replied (sets replied_at)
+  await markAsReplied(rootMessageId)
   revalidatePath('/')
 
   return aiResponse

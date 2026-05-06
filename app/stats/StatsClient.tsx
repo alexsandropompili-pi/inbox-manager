@@ -33,11 +33,11 @@ function StatCard({
   accent: string
 }) {
   return (
-    <div className="relative flex flex-1 min-w-0 items-center gap-4 rounded-xl border border-white/[0.07] bg-zinc-800/50 px-5 py-5 overflow-hidden">
+    <div className="relative flex flex-1 min-w-0 items-center gap-4 rounded-xl border border-gray-200 bg-white px-5 py-5 overflow-hidden shadow-sm">
       <div className={`absolute left-0 top-0 h-full w-[3px] ${accent}`} />
       <div className="min-w-0">
-        <p className="text-3xl font-bold tabular-nums tracking-tight text-white">{value}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">{label}</p>
+        <p className="text-3xl font-bold tabular-nums tracking-tight text-gray-900">{value}</p>
+        <p className="mt-0.5 text-xs text-gray-500">{label}</p>
       </div>
     </div>
   )
@@ -47,8 +47,8 @@ function StatCard({
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-white/[0.07] bg-zinc-800/50 p-5">
-      <p className="mb-4 text-sm font-semibold text-zinc-300">{title}</p>
+    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <p className="mb-4 text-sm font-semibold text-gray-700">{title}</p>
       {children}
     </div>
   )
@@ -63,9 +63,9 @@ function CustomTooltip({ active, payload, label }: {
 }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs shadow-xl">
-      <p className="text-zinc-400">{label}</p>
-      <p className="font-bold text-white">{payload[0].value} messaggi</p>
+    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-lg">
+      <p className="text-gray-500">{label}</p>
+      <p className="font-bold text-gray-900">{payload[0].value} messaggi</p>
     </div>
   )
 }
@@ -74,13 +74,13 @@ function CustomTooltip({ active, payload, label }: {
 
 export function StatsClient({ total, byStatus, trendData, settoreData }: Props) {
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto bg-zinc-950 px-6 py-6">
+    <div className="flex flex-1 flex-col overflow-y-auto bg-white px-6 py-6">
       <div className="mx-auto w-full max-w-5xl space-y-6">
 
         {/* Header */}
         <div>
-          <h1 className="text-xl font-bold text-white">Report</h1>
-          <p className="mt-1 text-sm text-zinc-500">Panoramica sull&apos;attività del sistema</p>
+          <h1 className="text-xl font-bold text-gray-900">Report</h1>
+          <p className="mt-1 text-sm text-gray-500">Panoramica sull&apos;attività del sistema</p>
         </div>
 
         {/* Stat cards */}
@@ -95,17 +95,17 @@ export function StatsClient({ total, byStatus, trendData, settoreData }: Props) 
         <ChartCard title="Messaggi ricevuti — ultimi 30 giorni">
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={trendData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
               <XAxis
                 dataKey="date"
-                tick={{ fill: '#71717a', fontSize: 10 }}
+                tick={{ fill: '#9ca3af', fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
                 interval="preserveStartEnd"
               />
               <YAxis
                 allowDecimals={false}
-                tick={{ fill: '#71717a', fontSize: 10 }}
+                tick={{ fill: '#9ca3af', fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
               />
@@ -125,20 +125,20 @@ export function StatsClient({ total, byStatus, trendData, settoreData }: Props) 
         {/* Settore chart */}
         <ChartCard title="Messaggi per settore">
           {settoreData.length === 0 ? (
-            <p className="py-8 text-center text-sm text-zinc-600">Nessun dato ancora disponibile</p>
+            <p className="py-8 text-center text-sm text-gray-400">Nessun dato ancora disponibile</p>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={settoreData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
                 <XAxis
                   dataKey="name"
-                  tick={{ fill: '#71717a', fontSize: 11 }}
+                  tick={{ fill: '#9ca3af', fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                 />
                 <YAxis
                   allowDecimals={false}
-                  tick={{ fill: '#71717a', fontSize: 10 }}
+                  tick={{ fill: '#9ca3af', fontSize: 10 }}
                   tickLine={false}
                   axisLine={false}
                 />

@@ -28,9 +28,9 @@ function formatDeadline(ms: number): string {
 }
 
 const STATUS_STYLES: Record<SlaStatus, string> = {
-  ok:      'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
-  warning: 'bg-amber-500/10 text-amber-400 ring-amber-500/30',
-  breach:  'bg-red-500/15 text-red-400 ring-red-500/30',
+  ok:      'bg-emerald-50 text-emerald-600 ring-emerald-200',
+  warning: 'bg-amber-50 text-amber-600 ring-amber-200',
+  breach:  'bg-red-50 text-red-600 ring-red-200',
 }
 
 interface Props {

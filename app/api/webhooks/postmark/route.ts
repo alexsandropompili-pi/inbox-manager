@@ -23,6 +23,11 @@ interface PostmarkAddress {
   MailboxHash: string
 }
 
+interface PostmarkHeader {
+  Name: string
+  Value: string
+}
+
 interface PostmarkInboundPayload {
   MessageID: string
   Date: string
@@ -35,6 +40,7 @@ interface PostmarkInboundPayload {
   TextBody: string
   HtmlBody: string
   ReplyTo?: string
+  Headers?: PostmarkHeader[]
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -97,6 +103,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, duplicate: true })
   }
 
+  // ── Thread detection via In-Reply-To header ────────────────────────────────
+  const inReplyToRaw = payload.Headers?.find(h => h.Name === 'In-Reply-To')?.Value ?? null
+  const inReplyTo = inReplyToRaw?.replace(/^<|>$/g, '') ?? null
+
+  let threadId: string | null = null
+
+  if (inReplyTo) {
+    const { data: originalMessage } = await db
+      .from('messages')
+      .select('id, status, replied_at, thread_id')
+      .eq('external_message_id', inReplyTo)
+      .maybeSingle()
+
+    if (originalMessage) {
+      const rootId = originalMessage.thread_id ?? originalMessage.id
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      const withinWindow =
+        !originalMessage.replied_at || originalMessage.replied_at > sevenDaysAgo
+
+      if (originalMessage.status === 'replied' && withinWindow) {
+        await db
+          .from('messages')
+          .update({ status: 'arrived', replied_at: null })
+          .eq('id', rootId)
+        threadId = rootId
+      }
+      // If outside 7-day window or not replied: create a new standalone ticket
+    }
+  }
+
   // ── Build message row ──────────────────────────────────────────────────────
   const body = payload.TextBody?.trim() || stripHtml(payload.HtmlBody ?? '')
 
@@ -104,7 +140,7 @@ export async function POST(req: NextRequest) {
     company_id: emailAccount.company_id,
     email_account_id: emailAccount.id,
     external_message_id: payload.MessageID,
-    thread_id: null,
+    thread_id: threadId,
     subject: payload.Subject || '(nessun oggetto)',
     body,
     from_email: payload.FromFull.Email,

@@ -58,9 +58,8 @@ const wikiContext = await queryWikiContext(
         }
 
         const stream = client.messages.stream({
-          model: 'claude-opus-4-6',
-          max_tokens: 16000,
-          thinking: { type: 'adaptive' },
+          model: 'claude-sonnet-4-6',
+          max_tokens: 3000,
           system: systemPrompt,
           messages: [
             {

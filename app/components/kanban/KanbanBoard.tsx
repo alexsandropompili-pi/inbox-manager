@@ -1,19 +1,14 @@
 'use client'
 
 import { Fragment, useMemo, useState, useTransition } from 'react'
-import Link from 'next/link'
 import type { Message, KanbanStatus } from '@/types/database'
 import { KanbanColumn } from './KanbanColumn'
 import { MessageDetail } from '@/app/components/message/MessageDetail'
 import { SearchBar, DEFAULT_FILTERS } from './SearchBar'
 import type { Filters } from './SearchBar'
-import { StatsRow } from './StatsRow'
-import type { DashboardStats } from './StatsRow'
 import { moveMessageAction, assignMessageAction } from '@/app/actions/messages'
-import { buildOperatorList, findOperator } from '@/lib/team'
+import { buildOperatorList } from '@/lib/team'
 import type { Operator } from '@/lib/team'
-import { countCritical } from '@/lib/logistics/token-health'
-import { countSlaBreached } from '@/lib/logistics/sla'
 
 type Columns = Record<KanbanStatus, Message[]>
 
@@ -90,49 +85,6 @@ export function KanbanBoard({
       replied:     columns.replied.filter(matches),
     }
   }, [columns, filters, myMessagesOnly, currentUserEmail])
-
-  const totalMessages = Object.values(columns).reduce((sum, col) => sum + col.length, 0)
-  const filteredTotal = Object.values(filteredColumns).reduce((sum, col) => sum + col.length, 0)
-
-  const stats = useMemo((): DashboardStats => {
-    const all = [...columns.arrived, ...columns.in_progress, ...columns.replied]
-    const now = Date.now()
-
-    // 1. Received today (since midnight local time)
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
-    const receivedToday = all.filter(
-      (m) => new Date(m.received_at) >= startOfToday,
-    ).length
-
-    // 2. SLA breached (active messages only)
-    const slaBreached = countSlaBreached([...columns.arrived, ...columns.in_progress])
-
-    // 3. % resolved in last 24 h
-    const last24h = all.filter(
-      (m) => now - new Date(m.received_at).getTime() <= 86_400_000,
-    )
-    const resolvedPct24h =
-      last24h.length > 0
-        ? Math.round(
-            (last24h.filter((m) => m.status === 'replied').length / last24h.length) * 100,
-          )
-        : 0
-
-    // 4. High-priority arrived (not yet handled)
-    const highPriorityUnread = columns.arrived.filter(
-      (m) => m.priority === 'high',
-    ).length
-
-    // 5. Critical tokens across all active columns (not archived)
-    const criticalTokens = countCritical([
-      ...columns.arrived,
-      ...columns.in_progress,
-      ...columns.replied,
-    ])
-
-    return { receivedToday, slaBreached, resolvedPct24h, highPriorityUnread, criticalTokens }
-  }, [columns])
 
   function handleDrop(messageId: string, fromStatus: KanbanStatus, toStatus: KanbanStatus) {
     // Optimistic update
@@ -214,53 +166,15 @@ export function KanbanBoard({
   }
 
   return (
-    <div className="flex h-full flex-col bg-zinc-900">
-      {/* Dashboard header */}
-      <header className="shrink-0 border-b border-white/[0.06] bg-zinc-900 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {categoryTitle && (
-              <Link
-                href="/"
-                className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-400 transition-all hover:border-white/[0.15] hover:text-zinc-100"
-              >
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                </svg>
-                Dashboard
-              </Link>
-            )}
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">
-                {categoryTitle ?? 'InboxManager'}
-              </h1>
-              <p className="mt-0.5 text-sm text-zinc-500">
-                {isFiltered
-                  ? `${filteredTotal} di ${totalMessages} messaggi`
-                  : `${totalMessages} messaggi totali`}
-              </p>
-            </div>
-          </div>
-
-          {/* Stats chips */}
-          <div className="hidden items-center gap-2 sm:flex">
-            <Chip label="Arrivati"       count={filteredColumns.arrived.length}     color="blue" />
-            <Chip label="In svolgimento" count={filteredColumns.in_progress.length} color="amber" />
-            <Chip label="Conclusi"       count={filteredColumns.replied.length}     color="emerald" />
-          </div>
-        </div>
-      </header>
-
+    <div className="flex h-full flex-col bg-white">
       {/* Search & filters bar */}
       <SearchBar
         filters={filters}
         onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
         onReset={() => setFilters(DEFAULT_FILTERS)}
         isFiltered={isFiltered}
+        categoryTitle={categoryTitle}
       />
-
-      {/* Stats widgets */}
-      <StatsRow stats={stats} />
 
       {/* Kanban columns */}
       <main className="flex flex-1 overflow-x-auto px-5 py-5">
@@ -268,7 +182,7 @@ export function KanbanBoard({
           <Fragment key={status}>
             {/* Vertical divider between columns */}
             {index > 0 && (
-              <div className="mx-4 w-px shrink-0 self-stretch rounded-full bg-white/[0.06]" />
+              <div className="mx-4 w-px shrink-0 self-stretch rounded-full bg-gray-200" />
             )}
             <KanbanColumn
               status={status}
@@ -288,38 +202,9 @@ export function KanbanBoard({
           message={selectedMessage}
           onClose={() => setSelectedMessage(null)}
           onStatusChange={handleMessageStatusChange}
-          onAssign={handleAssign}
-          operators={operators}
         />
       )}
     </div>
   )
 }
 
-function Chip({
-  label,
-  count,
-  color,
-}: {
-  label: string
-  count: number
-  color: 'blue' | 'amber' | 'emerald'
-}) {
-  const styles = {
-    blue:    'bg-blue-500/10 text-blue-300 ring-blue-500/30',
-    amber:   'bg-amber-500/10 text-amber-300 ring-amber-500/30',
-    emerald: 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/30',
-  }
-  return (
-    <span
-      className={[
-        'inline-flex items-center gap-1.5 rounded-full px-3 py-1',
-        'text-xs font-medium ring-1 ring-inset',
-        styles[color],
-      ].join(' ')}
-    >
-      {label}
-      <span className="font-bold tabular-nums">{count}</span>
-    </span>
-  )
-}

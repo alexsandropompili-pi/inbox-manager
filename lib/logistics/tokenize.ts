@@ -249,7 +249,7 @@ export async function tokenizeMessage(params: {
   const year = new Date().getFullYear()
 
   const response = await client.messages.create({
-    model: 'claude-opus-4-6',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 1024,
     system: [{ type: 'text', text: SYSTEM_TEXT, cache_control: { type: 'ephemeral' } }],
     tools: [{ ...TOKENIZE_TOOL, cache_control: { type: 'ephemeral' } }],
@@ -293,7 +293,7 @@ export async function extractDatiEstratti(params: {
   const client = new Anthropic()
 
   const response = await client.messages.create({
-    model: 'claude-opus-4-6',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 512,
     system: [{ type: 'text', text: SYSTEM_TEXT, cache_control: { type: 'ephemeral' } }],
     tools: [{ ...EXTRACT_DATA_TOOL, cache_control: { type: 'ephemeral' } }],

@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #09090b;
-  --foreground: #fafafa;
+  --background: #ffffff;
+  --foreground: #09090b;
 }
 
 @theme inline {
@@ -34,7 +34,7 @@ body {
   --animate-pulse-red-border: pulse-red-border 1.8s ease-in-out infinite;
 }
 
-/* Dark scrollbars */
+/* Light scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -43,9 +43,9 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.12);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.22);
 }

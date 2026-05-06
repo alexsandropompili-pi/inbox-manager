@@ -18,26 +18,26 @@ export const COLUMN_CONFIG: Record<KanbanStatus, ColumnConfig> = {
   arrived: {
     label:      'Arrivato',
     accentLine: 'bg-blue-500',
-    headerText: 'text-blue-200',
-    countBg:    'bg-blue-500/20 border border-blue-500/30',
-    countText:  'text-blue-300',
-    dropRing:   'ring-2 ring-blue-500/40 bg-blue-500/5',
+    headerText: 'text-blue-700',
+    countBg:    'bg-blue-50 border border-blue-200',
+    countText:  'text-blue-600',
+    dropRing:   'ring-2 ring-blue-400/40 bg-blue-50/50',
   },
   in_progress: {
     label:      'In svolgimento',
     accentLine: 'bg-orange-500',
-    headerText: 'text-orange-200',
-    countBg:    'bg-orange-500/20 border border-orange-500/30',
-    countText:  'text-orange-300',
-    dropRing:   'ring-2 ring-orange-500/40 bg-orange-500/5',
+    headerText: 'text-orange-700',
+    countBg:    'bg-orange-50 border border-orange-200',
+    countText:  'text-orange-600',
+    dropRing:   'ring-2 ring-orange-400/40 bg-orange-50/50',
   },
   replied: {
     label:      'Concluso',
     accentLine: 'bg-emerald-500',
-    headerText: 'text-emerald-200',
-    countBg:    'bg-emerald-500/20 border border-emerald-500/30',
-    countText:  'text-emerald-300',
-    dropRing:   'ring-2 ring-emerald-500/40 bg-emerald-500/5',
+    headerText: 'text-emerald-700',
+    countBg:    'bg-emerald-50 border border-emerald-200',
+    countText:  'text-emerald-600',
+    dropRing:   'ring-2 ring-emerald-400/40 bg-emerald-50/50',
   },
 }
 
@@ -89,7 +89,7 @@ export function KanbanColumn({
   }
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.06] bg-zinc-950/50">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white">
       {/* Colored accent line */}
       <div className={['h-[3px] w-full shrink-0', config.accentLine].join(' ')} />
 
@@ -123,7 +123,7 @@ export function KanbanColumn({
         ].join(' ')}
       >
         {messages.length === 0 && !isDragOver && (
-          <p className="mt-6 text-center text-xs text-zinc-600">Nessun messaggio</p>
+          <p className="mt-6 text-center text-xs text-gray-400">Nessun messaggio</p>
         )}
         {messages.map((msg) => (
           <MessageCard

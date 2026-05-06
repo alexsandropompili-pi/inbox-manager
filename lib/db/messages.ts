@@ -8,6 +8,7 @@ export async function getMessages(companyId: string): Promise<Message[]> {
     .from('messages')
     .select('*')
     .eq('company_id', companyId)
+    .is('thread_id', null)
     .order('received_at', { ascending: false })
 
   if (error) throw error
@@ -100,7 +101,29 @@ export async function markAsRead(id: string): Promise<Message> {
 }
 
 export async function markAsReplied(id: string): Promise<Message> {
-  return updateMessage(id, { status: 'replied' })
+  return updateMessage(id, { status: 'replied', replied_at: new Date().toISOString() })
+}
+
+export async function getThreadMessages(rootId: string): Promise<Message[]> {
+  const { data, error } = await createServiceClient()
+    .from('messages')
+    .select('*')
+    .or(`id.eq.${rootId},thread_id.eq.${rootId}`)
+    .order('received_at', { ascending: true })
+
+  if (error) throw error
+  return data
+}
+
+export async function getMessageByExternalId(externalId: string): Promise<Message | null> {
+  const { data, error } = await createServiceClient()
+    .from('messages')
+    .select('*')
+    .eq('external_message_id', externalId)
+    .maybeSingle()
+
+  if (error) throw error
+  return data
 }
 
 export async function archiveMessage(id: string): Promise<Message> {
@@ -110,4 +133,23 @@ export async function archiveMessage(id: string): Promise<Message> {
 export async function deleteMessage(id: string): Promise<void> {
   const { error } = await createServiceClient().from('messages').delete().eq('id', id)
   if (error) throw error
+}
+
+export async function getMessagesByFromEmail(
+  companyId: string,
+  fromEmail: string,
+  excludeId: string,
+  limit = 10,
+): Promise<Message[]> {
+  const { data, error } = await createServiceClient()
+    .from('messages')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('from_email', fromEmail)
+    .neq('id', excludeId)
+    .order('received_at', { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return data
 }
