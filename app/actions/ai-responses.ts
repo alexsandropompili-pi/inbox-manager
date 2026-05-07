@@ -21,20 +21,25 @@ export async function approveAndSendAction(
   const replyToMessage = await getMessageById(replyToMessageId)
   if (!replyToMessage) throw new Error('Messaggio non trovato')
 
-  // Load the email account to get the "From" address
+  // Resolve the "From" address: env var > email_account lookup > error
   const db = createServiceClient()
-  const { data: emailAccount, error: accountError } = await db
-    .from('email_accounts')
-    .select('email')
-    .eq('id', replyToMessage.email_account_id)
-    .maybeSingle()
+  let fromEmail = process.env.POSTMARK_REPLY_FROM ?? null
 
-  if (accountError || !emailAccount) {
-    throw new Error('Account email mittente non trovato')
+  if (!fromEmail && replyToMessage.email_account_id) {
+    const { data: emailAccount } = await db
+      .from('email_accounts')
+      .select('email')
+      .eq('id', replyToMessage.email_account_id)
+      .maybeSingle()
+    fromEmail = emailAccount?.email ?? null
+  }
+
+  if (!fromEmail) {
+    throw new Error('Indirizzo mittente non configurato (imposta POSTMARK_REPLY_FROM)')
   }
 
   await sendReply({
-    from: process.env.POSTMARK_REPLY_FROM ?? emailAccount.email,
+    from: fromEmail,
     to: replyToMessage.from_email,
     subject: replyToMessage.subject,
     body: content,
