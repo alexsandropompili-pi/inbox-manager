@@ -181,7 +181,6 @@ export async function POST(req: NextRequest) {
     to_email: toEmail,
     assigned_to: null,
     status: 'arrived' as const,
-    channel: 'email' as const,
     received_at: payload.Date ? new Date(payload.Date).toISOString() : new Date().toISOString(),
   }
 
