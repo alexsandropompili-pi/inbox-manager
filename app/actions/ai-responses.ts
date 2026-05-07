@@ -65,15 +65,24 @@ export async function approveAndSendAction(
 
     return { ok: true, data: aiResponse }
   } catch (err) {
+    // Extract a readable string regardless of error shape
     let message: string
     if (err instanceof Error) {
       message = err.message
-    } else if (typeof err === 'object' && err !== null) {
-      try { message = JSON.stringify(err) } catch { message = String(err) }
+    } else if (err !== null && typeof err === 'object') {
+      const e = err as Record<string, unknown>
+      const parts = [
+        e.message  ? `message: ${e.message}`   : null,
+        e.code     ? `code: ${e.code}`         : null,
+        e.details  ? `details: ${e.details}`   : null,
+        e.hint     ? `hint: ${e.hint}`         : null,
+        e.status   ? `status: ${e.status}`     : null,
+      ].filter(Boolean)
+      message = parts.length ? parts.join(' | ') : 'Errore oggetto non leggibile'
     } else {
       message = String(err)
     }
-    console.error('[approveAndSendAction]', message)
+    console.error('[approveAndSendAction ERROR]', message, err)
     return { ok: false, error: message }
   }
 }
