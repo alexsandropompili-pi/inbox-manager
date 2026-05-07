@@ -769,3 +769,47 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
     </>
   )
 }
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Storico overlay ──────────────────────────────────────────────── */}
+        {showStorico && (
+          <StoricoOverlay
+            tickets={clientHistory}
+            loading={historyLoading}
+            clientName={displayName}
+            onClose={() => setShowStorico(false)}
+          />
+        )}
+      </aside>
+
+      {/* Confirm dialogs */}
+      {confirmMode === 'approve' && (
+        <ConfirmDialog
+          title="Approva e invia la risposta?"
+          description="La risposta verrà inviata al mittente e il ticket spostato in 'Concluso'. Assicurati di aver revisionato il testo prima di procedere."
+          confirmLabel="Approva e invia"
+          cancelLabel="Torna alla revisione"
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirmMode(null)}
+        />
+      )}
+      {confirmMode === 'reject' && (
+        <ConfirmDialog
+          title="Rifiutare la risposta generata?"
+          description="La bozza verrà salvata come rifiutata nello storico. Potrai generarne una nuova."
+          confirmLabel="Rifiuta"
+          cancelLabel="Annulla"
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirmMode(null)}
+        />
+      )}
+    </>
+  )
+}

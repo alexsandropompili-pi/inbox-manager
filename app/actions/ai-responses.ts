@@ -12,7 +12,7 @@ export async function getResponseHistoryAction(messageId: string): Promise<AiRes
 }
 
 type ApproveResult =
-  | { ok: true;  data: AiResponse }
+  | { ok: true; data: AiResponse }
   | { ok: false; error: string }
 
 export async function approveAndSendAction(
@@ -22,7 +22,7 @@ export async function approveAndSendAction(
   content: string,
 ): Promise<ApproveResult> {
   try {
-    // Load the message to reply to (last in thread, or root if no thread)
+    // Load the message to reply to
     const replyToMessage = await getMessageById(replyToMessageId)
     if (!replyToMessage) return { ok: false, error: 'Messaggio non trovato' }
 
@@ -51,33 +51,29 @@ export async function approveAndSendAction(
       inReplyTo: replyToMessage.external_message_id,
     })
 
-    // Persist response linked to the specific message we replied to
     const aiResponse = await createAiResponse({
       message_id: replyToMessageId,
       content,
       status: 'sent',
     })
 
-    // Mark root as replied (sets replied_at)
     await markAsReplied(rootMessageId)
     revalidatePath('/')
 
     return { ok: true, data: aiResponse }
   } catch (err) {
-    // Extract a readable string regardless of error shape
     let message: string
     if (err instanceof Error) {
       message = err.message
     } else if (err !== null && typeof err === 'object') {
       const e = err as Record<string, unknown>
       const parts = [
-        e.message  ? `message: ${e.message}`   : null,
-        e.code     ? `code: ${e.code}`         : null,
-        e.details  ? `details: ${e.details}`   : null,
-        e.hint     ? `hint: ${e.hint}`         : null,
-        e.status   ? `status: ${e.status}`     : null,
+        e.message ? `message: ${e.message}` : null,
+        e.code    ? `code: ${e.code}`       : null,
+        e.details ? `details: ${e.details}` : null,
+        e.hint    ? `hint: ${e.hint}`       : null,
       ].filter(Boolean)
-      message = parts.length ? parts.join(' | ') : 'Errore oggetto non leggibile'
+      message = parts.length ? parts.join(' | ') : 'Errore non serializzabile'
     } else {
       message = String(err)
     }
@@ -95,6 +91,5 @@ export async function rejectResponseAction(
     content,
     status: 'rejected',
   })
-
   return aiResponse
 }
