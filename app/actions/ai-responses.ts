@@ -65,7 +65,14 @@ export async function approveAndSendAction(
 
     return { ok: true, data: aiResponse }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
+    let message: string
+    if (err instanceof Error) {
+      message = err.message
+    } else if (typeof err === 'object' && err !== null) {
+      try { message = JSON.stringify(err) } catch { message = String(err) }
+    } else {
+      message = String(err)
+    }
     console.error('[approveAndSendAction]', message)
     return { ok: false, error: message }
   }
