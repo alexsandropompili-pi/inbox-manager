@@ -90,7 +90,6 @@ export type AiResponseStatus = 'draft' | 'sent' | 'rejected'
 export interface AiResponse {
   id: string
   message_id: string
-  company_id: string
   content: string
   status: AiResponseStatus
   created_at: string

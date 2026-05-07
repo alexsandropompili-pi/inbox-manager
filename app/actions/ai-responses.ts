@@ -54,7 +54,6 @@ export async function approveAndSendAction(
     // Persist response linked to the specific message we replied to
     const aiResponse = await createAiResponse({
       message_id: replyToMessageId,
-      company_id: companyId,
       content,
       status: 'sent',
     })
@@ -89,12 +88,10 @@ export async function approveAndSendAction(
 
 export async function rejectResponseAction(
   messageId: string,
-  companyId: string,
   content: string,
 ): Promise<AiResponse> {
   const aiResponse = await createAiResponse({
     message_id: messageId,
-    company_id: companyId,
     content,
     status: 'rejected',
   })

@@ -452,7 +452,6 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
         const optimisticResponse: AiResponse = {
           id: `optimistic-${Date.now()}`,
           message_id: activeMessage.id,
-          company_id: message.company_id,
           content: draft,
           status: 'sent',
           created_at: new Date().toISOString(),
@@ -488,7 +487,7 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
           return next
         })
       } else if (mode === 'reject') {
-        await rejectResponseAction(message.id, message.company_id, draft)
+        await rejectResponseAction(message.id, draft)
         setDraft('')
       }
     } catch (err) {
