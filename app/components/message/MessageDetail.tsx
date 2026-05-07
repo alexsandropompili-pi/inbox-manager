@@ -465,7 +465,19 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
         })
         setDraft('')
 
-        await approveAndSendAction(message.id, activeMessage.id, message.company_id, draft)
+        const result = await approveAndSendAction(message.id, activeMessage.id, message.company_id, draft)
+        if (!result.ok) {
+          // Rollback optimistic bubble and show error
+          setThreadResponses((prev) => {
+            const next = new Map(prev)
+            next.set(activeMessage.id, (prev.get(activeMessage.id) ?? []).filter((r) => !r.id.startsWith('optimistic-')))
+            return next
+          })
+          setSendError(result.error)
+          setDraft(draft) // restore draft so user can retry
+          return
+        }
+
         onStatusChange(message.id, 'replied')
 
         // Replace optimistic entry with real server data

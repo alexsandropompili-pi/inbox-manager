@@ -11,54 +11,64 @@ export async function getResponseHistoryAction(messageId: string): Promise<AiRes
   return getAiResponsesByMessageId(messageId)
 }
 
+type ApproveResult =
+  | { ok: true;  data: AiResponse }
+  | { ok: false; error: string }
+
 export async function approveAndSendAction(
   rootMessageId: string,
   replyToMessageId: string,
   companyId: string,
   content: string,
-): Promise<AiResponse> {
-  // Load the message to reply to (last in thread, or root if no thread)
-  const replyToMessage = await getMessageById(replyToMessageId)
-  if (!replyToMessage) throw new Error('Messaggio non trovato')
+): Promise<ApproveResult> {
+  try {
+    // Load the message to reply to (last in thread, or root if no thread)
+    const replyToMessage = await getMessageById(replyToMessageId)
+    if (!replyToMessage) return { ok: false, error: 'Messaggio non trovato' }
 
-  // Resolve the "From" address: env var > email_account lookup > error
-  const db = createServiceClient()
-  let fromEmail = process.env.POSTMARK_REPLY_FROM ?? null
+    // Resolve the "From" address: env var > email_account lookup > error
+    const db = createServiceClient()
+    let fromEmail = process.env.POSTMARK_REPLY_FROM ?? null
 
-  if (!fromEmail && replyToMessage.email_account_id) {
-    const { data: emailAccount } = await db
-      .from('email_accounts')
-      .select('email')
-      .eq('id', replyToMessage.email_account_id)
-      .maybeSingle()
-    fromEmail = emailAccount?.email ?? null
+    if (!fromEmail && replyToMessage.email_account_id) {
+      const { data: emailAccount } = await db
+        .from('email_accounts')
+        .select('email')
+        .eq('id', replyToMessage.email_account_id)
+        .maybeSingle()
+      fromEmail = emailAccount?.email ?? null
+    }
+
+    if (!fromEmail) {
+      return { ok: false, error: 'Indirizzo mittente non configurato (imposta POSTMARK_REPLY_FROM)' }
+    }
+
+    await sendReply({
+      from: fromEmail,
+      to: replyToMessage.from_email,
+      subject: replyToMessage.subject,
+      body: content,
+      inReplyTo: replyToMessage.external_message_id,
+    })
+
+    // Persist response linked to the specific message we replied to
+    const aiResponse = await createAiResponse({
+      message_id: replyToMessageId,
+      company_id: companyId,
+      content,
+      status: 'sent',
+    })
+
+    // Mark root as replied (sets replied_at)
+    await markAsReplied(rootMessageId)
+    revalidatePath('/')
+
+    return { ok: true, data: aiResponse }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[approveAndSendAction]', message)
+    return { ok: false, error: message }
   }
-
-  if (!fromEmail) {
-    throw new Error('Indirizzo mittente non configurato (imposta POSTMARK_REPLY_FROM)')
-  }
-
-  await sendReply({
-    from: fromEmail,
-    to: replyToMessage.from_email,
-    subject: replyToMessage.subject,
-    body: content,
-    inReplyTo: replyToMessage.external_message_id,
-  })
-
-  // Persist response linked to the specific message we replied to
-  const aiResponse = await createAiResponse({
-    message_id: replyToMessageId,
-    company_id: companyId,
-    content,
-    status: 'sent',
-  })
-
-  // Mark root as replied (sets replied_at)
-  await markAsReplied(rootMessageId)
-  revalidatePath('/')
-
-  return aiResponse
 }
 
 export async function rejectResponseAction(
