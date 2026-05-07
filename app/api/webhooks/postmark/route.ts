@@ -77,11 +77,44 @@ export async function POST(req: NextRequest) {
 
   const db = createServiceClient()
 
-  const { data: emailAccount } = await db
+  // Try exact match first, then fall back to the OriginalRecipient header
+  // (Postmark sets this to the real destination when a custom inbound domain
+  // is not yet configured and emails arrive via the shared inbound address).
+  let { data: emailAccount } = await db
     .from('email_accounts')
     .select('id, company_id')
     .eq('email', toEmail)
     .maybeSingle()
+
+  if (!emailAccount) {
+    const originalRecipient = payload.Headers?.find(
+      h => h.Name === 'X-Forwarded-To' || h.Name === 'X-Original-To',
+    )?.Value ?? null
+
+    if (originalRecipient) {
+      const clean = originalRecipient.trim().replace(/^.*<(.+)>$/, '$1')
+      const { data: fallback } = await db
+        .from('email_accounts')
+        .select('id, company_id')
+        .eq('email', clean)
+        .maybeSingle()
+      if (fallback) emailAccount = fallback
+    }
+  }
+
+  if (!emailAccount) {
+    // Last resort: if there is exactly one email account configured, use it.
+    // This covers the case where the domain MX is not yet set up and emails
+    // arrive via the shared Postmark inbound address.
+    const { data: accounts } = await db
+      .from('email_accounts')
+      .select('id, company_id')
+      .limit(2)
+
+    if (accounts?.length === 1) {
+      emailAccount = accounts[0]
+    }
+  }
 
   if (!emailAccount) {
     // Postmark would retry on non-2xx — return 422 so it stops retrying
