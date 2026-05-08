@@ -126,7 +126,7 @@ function OperatorBubble({ response }: { response: AiResponse }) {
     <div className="flex items-end justify-end gap-2 pl-16">
       <div className="flex flex-col items-end gap-1">
         <div className="rounded-2xl rounded-tr-sm bg-indigo-600 px-4 py-2.5 shadow-sm">
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-white">{response.content}</p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-white">{response.final_text ?? response.generated_text}</p>
         </div>
         <div className="flex items-center gap-1 mr-1">
           <span className="text-[10px] text-zinc-400" suppressHydrationWarning>
@@ -326,7 +326,7 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
       await Promise.all(
         threadMessages.map(async (msg) => {
           const all = await getResponseHistoryAction(msg.id)
-          map.set(msg.id, all.filter((r) => r.status === 'sent').reverse())
+          map.set(msg.id, all.filter((r) => r.review_status === 'sent').reverse())
         }),
       )
       setThreadResponses(new Map(map))
@@ -452,8 +452,9 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
         const optimisticResponse: AiResponse = {
           id: `optimistic-${Date.now()}`,
           message_id: activeMessage.id,
-          content: draft,
-          status: 'sent',
+          generated_text: draft,
+          final_text: draft,
+          review_status: 'sent',
           created_at: new Date().toISOString(),
         }
         setThreadResponses((prev) => {
@@ -483,7 +484,7 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
         const all = await getResponseHistoryAction(activeMessage.id)
         setThreadResponses((prev) => {
           const next = new Map(prev)
-          next.set(activeMessage.id, all.filter((r) => r.status === 'sent').reverse())
+          next.set(activeMessage.id, all.filter((r) => r.review_status === 'sent').reverse())
           return next
         })
       } else if (mode === 'reject') {
@@ -724,92 +725,4 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
                       </svg>
                     ) : (
                       <svg className="h-4 w-4 translate-x-0.5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* ── Storico overlay ──────────────────────────────────────────────── */}
-        {showStorico && (
-          <StoricoOverlay
-            tickets={clientHistory}
-            loading={historyLoading}
-            clientName={displayName}
-            onClose={() => setShowStorico(false)}
-          />
-        )}
-      </aside>
-
-      {/* Confirm dialogs */}
-      {confirmMode === 'approve' && (
-        <ConfirmDialog
-          title="Approva e invia la risposta?"
-          description="La risposta verrà inviata al mittente e il ticket spostato in 'Concluso'. Assicurati di aver revisionato il testo prima di procedere."
-          confirmLabel="Approva e invia"
-          cancelLabel="Torna alla revisione"
-          onConfirm={handleConfirm}
-          onCancel={() => setConfirmMode(null)}
-        />
-      )}
-      {confirmMode === 'reject' && (
-        <ConfirmDialog
-          title="Rifiutare la risposta generata?"
-          description="La bozza verrà salvata come rifiutata nello storico. Potrai generarne una nuova."
-          confirmLabel="Rifiuta"
-          cancelLabel="Annulla"
-          onConfirm={handleConfirm}
-          onCancel={() => setConfirmMode(null)}
-        />
-      )}
-    </>
-  )
-}
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* ── Storico overlay ──────────────────────────────────────────────── */}
-        {showStorico && (
-          <StoricoOverlay
-            tickets={clientHistory}
-            loading={historyLoading}
-            clientName={displayName}
-            onClose={() => setShowStorico(false)}
-          />
-        )}
-      </aside>
-
-      {/* Confirm dialogs */}
-      {confirmMode === 'approve' && (
-        <ConfirmDialog
-          title="Approva e invia la risposta?"
-          description="La risposta verrà inviata al mittente e il ticket spostato in 'Concluso'. Assicurati di aver revisionato il testo prima di procedere."
-          confirmLabel="Approva e invia"
-          cancelLabel="Torna alla revisione"
-          onConfirm={handleConfirm}
-          onCancel={() => setConfirmMode(null)}
-        />
-      )}
-      {confirmMode === 'reject' && (
-        <ConfirmDialog
-          title="Rifiutare la risposta generata?"
-          description="La bozza verrà salvata come rifiutata nello storico. Potrai generarne una nuova."
-          confirmLabel="Rifiuta"
-          cancelLabel="Annulla"
-          onConfirm={handleConfirm}
-          onCancel={() => setConfirmMode(null)}
-        />
-      )}
-    </>
-  )
-}
+                        <path d="M3.478 2.405a.75.75 0 00-.926.

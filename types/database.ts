@@ -90,8 +90,9 @@ export type AiResponseStatus = 'draft' | 'sent' | 'rejected'
 export interface AiResponse {
   id: string
   message_id: string
-  content: string
-  status: AiResponseStatus
+  generated_text: string
+  final_text: string | null
+  review_status: AiResponseStatus
   created_at: string
 }
 
@@ -120,6 +121,7 @@ export type MessageInsert = Omit<Message, 'id' | 'created_at' | 'replied_at' | '
 
 export type AiResponseInsert = Omit<AiResponse, 'id' | 'created_at'> & {
   id?: string
+  created_at?: string
 }
 
 // ─── Update types (all fields optional except id) ─────────────────────────────

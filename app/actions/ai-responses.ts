@@ -53,8 +53,9 @@ export async function approveAndSendAction(
 
     const aiResponse = await createAiResponse({
       message_id: replyToMessageId,
-      content,
-      status: 'sent',
+      generated_text: content,
+      final_text: content,
+      review_status: 'sent',
     })
 
     await markAsReplied(rootMessageId)
@@ -88,8 +89,9 @@ export async function rejectResponseAction(
 ): Promise<AiResponse> {
   const aiResponse = await createAiResponse({
     message_id: messageId,
-    content,
-    status: 'rejected',
+    generated_text: content,
+    final_text: null,
+    review_status: 'rejected',
   })
   return aiResponse
 }
