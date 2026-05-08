@@ -448,39 +448,9 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
     setIsSending(true)
     try {
       if (mode === 'approve') {
-        // Optimistic update: show the bubble immediately, don't wait for server round-trip
-        const optimisticResponse: AiResponse = {
-          id: `optimistic-${Date.now()}`,
-          message_id: activeMessage.id,
-          generated_text: draft,
-          final_text: draft,
-          review_status: 'sent',
-          created_at: new Date().toISOString(),
-        }
-        setThreadResponses((prev) => {
-          const next = new Map(prev)
-          const existing = prev.get(activeMessage.id) ?? []
-          next.set(activeMessage.id, [optimisticResponse, ...existing])
-          return next
-        })
+        await approveAndSendAction(message.id, activeMessage.id, message.company_id, draft)
         setDraft('')
-
-        const result = await approveAndSendAction(message.id, activeMessage.id, message.company_id, draft)
-        if (!result.ok) {
-          // Rollback optimistic bubble and show error
-          setThreadResponses((prev) => {
-            const next = new Map(prev)
-            next.set(activeMessage.id, (prev.get(activeMessage.id) ?? []).filter((r) => !r.id.startsWith('optimistic-')))
-            return next
-          })
-          setSendError(result.error)
-          setDraft(draft) // restore draft so user can retry
-          return
-        }
-
         onStatusChange(message.id, 'replied')
-
-        // Replace optimistic entry with real server data
         const all = await getResponseHistoryAction(activeMessage.id)
         setThreadResponses((prev) => {
           const next = new Map(prev)
