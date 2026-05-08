@@ -1,0 +1,2586 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staffio — Demo GP Courier</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f3;
+    --bg-tertiary: #eeede9;
+    --text-primary: #1a1a18;
+    --text-secondary: #6b6b67;
+    --text-tertiary: #9a9a96;
+    --border-light: rgba(0,0,0,0.10);
+    --border-mid: rgba(0,0,0,0.18);
+    --blue: #185FA5;
+    --blue-light: #E6F1FB;
+    --blue-mid: #85B7EB;
+    --red: #E24B4A;
+    --red-light: #FCEBEB;
+    --amber: #EF9F27;
+    --amber-light: #FAEEDA;
+    --green: #3B6D11;
+    --green-light: #EAF3DE;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-primary: #1e1e1c;
+      --bg-secondary: #272725;
+      --bg-tertiary: #2e2e2b;
+      --text-primary: #f0efe8;
+      --text-secondary: #a8a8a2;
+      --text-tertiary: #6b6b67;
+      --border-light: rgba(255,255,255,0.08);
+      --border-mid: rgba(255,255,255,0.14);
+      --blue-light: #0c2a48;
+      --red-light: #3d1010;
+      --amber-light: #3d2500;
+      --green-light: #152608;
+    }
+  }
+
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg-tertiary); color: var(--text-primary); font-size: 14px; }
+
+  .app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* TOPBAR */
+  .topbar {
+    background: var(--bg-primary);
+    border-bottom: 0.5px solid var(--border-light);
+    padding: 0 24px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .logo { font-size: 18px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.5px; }
+  .logo span.blue { color: var(--blue); }
+  .logo span.co { font-size: 13px; color: var(--text-tertiary); font-weight: 400; margin-left: 6px; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .topbar-user { font-size: 13px; color: var(--text-secondary); }
+  .topbar-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--blue-light); color: var(--blue); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .topbar-btn { font-size: 12px; padding: 5px 12px; background: transparent; border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); color: var(--text-secondary); cursor: pointer; font-family: inherit; transition: background 0.1s; }
+  .topbar-btn:hover { background: var(--bg-secondary); }
+  .topbar-btn.danger { color: #A32D2D; border-color: #F09595; }
+
+  /* MAIN */
+  .main { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 210px;
+    background: var(--bg-primary);
+    border-right: 0.5px solid var(--border-light);
+    padding: 16px 0 0;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width 0.28s ease, padding 0.28s ease, border-color 0.28s ease;
+  }
+  .sidebar.collapsed { width: 0; padding: 0; border-color: transparent; }
+
+  .sidebar-toggle {
+    position: absolute;
+    top: 50%;
+    left: 210px;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 48px;
+    background: var(--bg-primary);
+    border: 0.5px solid var(--border-light);
+    border-left: none;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    transition: left 0.28s ease, background 0.12s;
+    color: var(--text-tertiary);
+    font-size: 11px;
+    user-select: none;
+    padding: 0;
+  }
+  .sidebar-toggle:hover { background: var(--bg-secondary); color: var(--text-primary); }
+  .sidebar.collapsed + .sidebar-toggle { left: 0; }
+  .sidebar-toggle .toggle-arrow { display: inline-block; transition: transform 0.28s ease; line-height: 1; }
+  .sidebar.collapsed + .sidebar-toggle .toggle-arrow { transform: rotate(180deg); }
+  .sidebar-section { padding: 0 12px 8px; }
+  .sidebar-label { font-size: 10px; color: var(--text-tertiary); padding: 0 8px 6px; letter-spacing: 0.6px; text-transform: uppercase; }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px; cursor: pointer; font-size: 13px; color: var(--text-secondary);
+    border-radius: var(--radius-md); transition: background 0.1s; margin-bottom: 1px;
+  }
+  .sidebar-item:hover { background: var(--bg-secondary); color: var(--text-primary); }
+  .sidebar-item.active { background: var(--blue-light); color: var(--blue); font-weight: 500; }
+  .sidebar-icon { font-size: 14px; width: 20px; text-align: center; }
+  .sidebar-badge { margin-left: auto; background: var(--red); color: #fff; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px; }
+  .sidebar-footer { margin-top: auto; padding: 12px 16px; border-top: 0.5px solid var(--border-light); }
+  .sync-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-right: 5px; }
+  .sync-text { font-size: 11px; color: var(--text-tertiary); }
+
+  /* CONTENT */
+  .content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+  .page { display: none; }
+  .page.active { display: flex; flex-direction: column; flex: 1; overflow-y: auto; padding: 22px 28px; }
+  #page-dashboard { overflow: hidden; }
+
+  .page-title { font-size: 18px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; }
+  .page-sub { font-size: 12px; color: var(--text-secondary); }
+  .dash-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
+
+  /* STATS */
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 12px 16px; }
+  .stat-label { font-size: 10px; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .stat-val { font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+  .stat-sub { font-size: 10px; color: var(--text-tertiary); margin-top: 3px; }
+  .stat-val.red { color: var(--red); }
+  .stat-val.amber { color: var(--amber); }
+
+  /* CATEGORY GRID */
+  .section-title { font-size: 10px; font-weight: 600; color: var(--text-tertiary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.7px; }
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+  }
+  .cat-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    padding: 20px;
+    cursor: pointer;
+    transition: box-shadow 0.18s, transform 0.14s, border-color 0.14s;
+    position: relative;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+  .cat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--border-light);
+    border-radius: 14px 14px 0 0;
+  }
+  .cat-card.c-red::after { background: var(--red); }
+  .cat-card.c-amber::after { background: var(--amber); }
+  .cat-card.c-zero::after { background: var(--border-light); }
+  .cat-card:hover { border-color: var(--border-mid); box-shadow: 0 6px 20px rgba(0,0,0,0.09); transform: translateY(-2px); }
+  .cat-card:active { transform: translateY(0); box-shadow: none; }
+  .cat-card-top { display: flex; align-items: center; justify-content: space-between; }
+  .cat-icon { font-size: 26px; }
+  .cat-count {
+    font-size: 28px; font-weight: 700; line-height: 1;
+    color: var(--text-primary);
+  }
+  .cat-count.red { color: var(--red); }
+  .cat-count.amber { color: var(--amber); }
+  .cat-count.zero { color: var(--text-tertiary); }
+  .cat-name { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+  .cat-sub { font-size: 11px; color: var(--text-tertiary); }
+
+  /* KANBAN */
+  .kanban-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .back-btn {
+    font-size: 13px; color: var(--text-secondary); cursor: pointer;
+    padding: 6px 12px; border: 0.5px solid var(--border-light);
+    border-radius: var(--radius-md); background: var(--bg-primary);
+    font-family: inherit; transition: border-color 0.1s;
+  }
+  .back-btn:hover { border-color: var(--border-mid); }
+  .filter-pills { display: flex; gap: 6px; margin-left: auto; }
+  .filter-btn {
+    font-size: 12px; padding: 5px 12px; border: 0.5px solid var(--border-light);
+    border-radius: 20px; background: var(--bg-primary); cursor: pointer;
+    color: var(--text-secondary); font-family: inherit; transition: all 0.1s;
+  }
+  .filter-btn:hover { border-color: var(--border-mid); }
+  .filter-btn.active { background: var(--blue-light); color: var(--blue); border-color: var(--blue-mid); }
+
+  .kanban-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .kanban-col { background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 14px; min-height: 320px; }
+  .col-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .col-title { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .col-count { font-size: 11px; color: var(--text-tertiary); background: var(--bg-primary); padding: 2px 8px; border-radius: 10px; border: 0.5px solid var(--border-light); }
+
+  .ticket-card {
+    background: var(--bg-primary);
+    border: 0.5px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 11px 13px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+    user-select: none;
+  }
+  .ticket-card:hover { border-color: var(--border-mid); transform: translateY(-1px); }
+  .ticket-card:active { transform: translateY(0); }
+  .ticket-card.urgent { border-left: 2.5px solid var(--red); }
+  .ticket-card.warn { border-left: 2.5px solid var(--amber); }
+  .ticket-card.done { opacity: 0.65; }
+  .ticket-top-row { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; }
+  .ticket-sender { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+  .ticket-urgent-tag { font-size: 9px; background: var(--red-light); color: var(--red); padding: 1px 5px; border-radius: 8px; font-weight: 600; }
+  .ticket-subject { font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 2px 0 6px; }
+  .ticket-meta { display: flex; align-items: center; justify-content: space-between; }
+  .ticket-time { font-size: 10px; color: var(--text-tertiary); }
+  .ticket-sla { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 500; }
+  .ticket-sla.ok { background: var(--green-light); color: var(--green); }
+  .ticket-sla.warn { background: var(--amber-light); color: #854F0B; }
+  .ticket-sla.over { background: var(--red-light); color: #A32D2D; }
+
+  /* TICKET DETAIL */
+  .ticket-detail-layout { display: grid; grid-template-columns: 1fr 230px; gap: 16px; }
+  .ticket-main-col { display: flex; flex-direction: column; gap: 12px; }
+  .detail-header-card { background: var(--bg-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-lg); padding: 16px; }
+  .detail-from { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .detail-email { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .detail-tags { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .detail-tag { font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 500; }
+  .detail-tag.urgente { background: var(--red-light); color: #A32D2D; }
+  .detail-tag.sla { background: var(--red-light); color: #A32D2D; }
+  .detail-tag.cat { background: var(--blue-light); color: var(--blue); }
+  .action-row { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+  .action-btn { font-size: 12px; padding: 6px 12px; border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); background: var(--bg-primary); cursor: pointer; color: var(--text-secondary); font-family: inherit; transition: background 0.1s; }
+  .action-btn:hover { background: var(--bg-secondary); }
+  .action-btn.primary { border-color: var(--blue); color: var(--blue); }
+  .action-btn.success { border-color: #3B6D11; color: #3B6D11; }
+
+  .chat-area { background: var(--bg-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-lg); padding: 16px; max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+  .chat-msg { display: flex; flex-direction: column; }
+  .chat-msg.out { align-items: flex-end; }
+  .chat-meta { font-size: 10px; color: var(--text-tertiary); margin-bottom: 4px; }
+  .chat-bubble { padding: 10px 13px; font-size: 12px; line-height: 1.6; border-radius: var(--radius-md); max-width: 85%; }
+  .chat-msg.in .chat-bubble { background: var(--bg-secondary); color: var(--text-primary); border-radius: 0 var(--radius-md) var(--radius-md) var(--radius-md); }
+  .chat-msg.out .chat-bubble { background: var(--blue-light); color: var(--text-primary); border-radius: var(--radius-md) 0 var(--radius-md) var(--radius-md); }
+
+  .reply-box { background: var(--bg-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-lg); padding: 16px; }
+  .reply-label-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .reply-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+  .ai-badge { background: var(--blue-light); color: var(--blue); font-size: 10px; padding: 2px 7px; border-radius: 8px; font-weight: 600; }
+  .regen-btn { margin-left: auto; font-size: 11px; color: var(--text-tertiary); cursor: pointer; background: none; border: none; font-family: inherit; }
+  .regen-btn:hover { color: var(--blue); }
+  .reply-textarea {
+    width: 100%; border: 0.5px solid var(--border-light); border-radius: var(--radius-md);
+    padding: 10px 12px; font-size: 12px; font-family: inherit; resize: vertical; min-height: 90px;
+    color: var(--text-primary); background: var(--bg-secondary); line-height: 1.6; outline: none;
+    transition: border-color 0.15s;
+  }
+  .reply-textarea:focus { border-color: var(--blue-mid); }
+  .reply-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+  .reply-footer-left { display: flex; align-items: center; gap: 8px; }
+  .attach-btn { font-size: 12px; padding: 6px 12px; border: 0.5px solid var(--border-light); border-radius: var(--radius-md); background: var(--bg-primary); cursor: pointer; font-family: inherit; color: var(--text-secondary); }
+  .from-label { font-size: 11px; color: var(--text-tertiary); }
+  .reply-footer-right { display: flex; gap: 8px; }
+  .draft-btn { font-size: 12px; padding: 6px 14px; border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); background: var(--bg-primary); cursor: pointer; font-family: inherit; color: var(--text-secondary); }
+  .send-btn { font-size: 12px; padding: 6px 18px; border: none; border-radius: var(--radius-md); background: var(--blue); color: #fff; cursor: pointer; font-family: inherit; font-weight: 500; transition: background 0.1s; }
+  .send-btn:hover { background: #0C447C; }
+
+  /* SIDEBAR TICKET */
+  .ticket-sidebar-col { display: flex; flex-direction: column; gap: 12px; }
+  .side-box { background: var(--bg-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-lg); padding: 14px; }
+  .side-box-title { font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .info-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 5px 0; border-bottom: 0.5px solid var(--border-light); }
+  .info-row:last-child { border-bottom: none; }
+  .info-key { color: var(--text-secondary); }
+  .info-val { color: var(--text-primary); font-weight: 500; }
+  .info-val.red { color: var(--red); }
+  .info-val.amber { color: var(--amber); }
+  .info-val.green { color: var(--green); }
+  .other-ticket-item { padding: 7px 0; border-bottom: 0.5px solid var(--border-light); cursor: pointer; }
+  .other-ticket-item:last-child { border-bottom: none; }
+  .other-ticket-item:hover .ot-subject { color: var(--blue); }
+  .ot-subject { font-size: 11px; color: var(--text-primary); transition: color 0.1s; }
+  .ot-meta { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }
+
+  /* REPORT */
+  .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .report-card { background: var(--bg-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-lg); padding: 20px; }
+  .report-card.full { grid-column: 1 / -1; }
+  .report-card-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 18px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .bar-label { font-size: 12px; color: var(--text-secondary); width: 100px; flex-shrink: 0; }
+  .bar-track { flex: 1; background: var(--bg-secondary); border-radius: 4px; height: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  .bar-val { font-size: 12px; color: var(--text-primary); font-weight: 500; width: 36px; text-align: right; }
+
+  .week-chart { display: flex; align-items: flex-end; gap: 10px; height: 80px; padding-top: 8px; }
+  .week-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; }
+  .week-bar { border-radius: 3px 3px 0 0; width: 100%; transition: background 0.2s; }
+  .week-bar-label { font-size: 10px; color: var(--text-tertiary); margin-top: 5px; }
+  .week-bar-label.current { color: var(--blue); font-weight: 600; }
+
+  /* REPORT redesign */
+  .report-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
+  .report-period-pills { display: flex; gap: 5px; }
+  .report-period-pill { font-size: 11px; padding: 4px 11px; border-radius: 20px; border: 0.5px solid var(--border-light); cursor: pointer; color: var(--text-secondary); background: transparent; font-family: inherit; }
+  .report-period-pill.rp-active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+  .report-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .report-kpi { background: var(--bg-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-lg); padding: 16px 18px; position: relative; overflow: hidden; }
+  .report-kpi::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; }
+  .report-kpi.kpi-blue::after { background: var(--blue); }
+  .report-kpi.kpi-green::after { background: var(--green); }
+  .report-kpi.kpi-amber::after { background: var(--amber); }
+  .report-kpi.kpi-red::after { background: var(--red); }
+  .report-kpi-label { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .report-kpi-value { font-size: 26px; font-weight: 700; line-height: 1; color: var(--text-primary); margin-bottom: 5px; }
+  .report-kpi-delta { font-size: 11px; }
+  .report-kpi-delta.pos { color: var(--green); }
+  .report-kpi-delta.neg { color: var(--red); }
+  .report-kpi-delta.neu { color: var(--text-tertiary); }
+
+  .rg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .rg-full { margin-bottom: 14px; }
+
+  .donut-wrap { display: flex; align-items: center; gap: 24px; padding-top: 6px; }
+  .donut { width: 130px; height: 130px; min-width: 130px; border-radius: 50%; position: relative; }
+  .donut::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 80px; height: 80px; border-radius: 50%; background: var(--bg-primary); }
+  .donut-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; z-index: 1; pointer-events: none; }
+  .donut-center-val { font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+  .donut-center-lbl { font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+  .donut-legend { display: flex; flex-direction: column; gap: 11px; flex: 1; }
+  .donut-legend-row { display: flex; align-items: center; gap: 9px; }
+  .donut-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .donut-legend-label { font-size: 12px; color: var(--text-secondary); flex: 1; }
+  .donut-legend-val { font-size: 12px; font-weight: 600; color: var(--text-primary); margin-right: 4px; }
+  .donut-legend-pct { font-size: 11px; color: var(--text-tertiary); width: 30px; text-align: right; }
+
+  .trend2 { display: flex; align-items: flex-end; gap: 8px; height: 140px; padding-top: 26px; }
+  .t2-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; }
+  .t2-top { font-size: 10px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+  .t2-bar { border-radius: 4px 4px 0 0; width: 100%; }
+  .t2-lbl { font-size: 10px; color: var(--text-tertiary); margin-top: 5px; white-space: nowrap; }
+  .t2-lbl.t2-cur { color: var(--blue); font-weight: 600; }
+
+  .sla-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
+  .sla-bar-row:last-child { margin-bottom: 0; }
+  .sla-bar-label { font-size: 12px; color: var(--text-secondary); width: 96px; flex-shrink: 0; }
+  .sla-bar-track { flex: 1; height: 7px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden; }
+  .sla-bar-fill { height: 100%; border-radius: 4px; }
+  .sla-bar-pct { font-size: 12px; font-weight: 600; width: 34px; text-align: right; }
+
+  .op-table { margin-top: 6px; }
+  .op-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 0.5px solid var(--border-light); }
+  .op-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .op-av { width: 28px; height: 28px; border-radius: 50%; background: var(--blue-light); color: var(--blue); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .op-name { font-size: 12px; font-weight: 500; color: var(--text-primary); flex: 1; }
+  .op-col { font-size: 11px; color: var(--text-secondary); width: 44px; text-align: right; }
+  .op-sla { font-size: 11px; font-weight: 600; width: 36px; text-align: right; }
+  .op-sla.good { color: var(--green); }
+  .op-sla.mid { color: var(--amber); }
+  .op-mini-track { flex: 1; max-width: 60px; height: 5px; background: var(--bg-secondary); border-radius: 3px; overflow: hidden; }
+  .op-mini-fill { height: 100%; border-radius: 3px; background: var(--blue); }
+
+  /* AUDIT */
+  .audit-table { background: var(--bg-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-lg); overflow: hidden; }
+  .audit-row { display: flex; gap: 12px; padding: 10px 16px; border-bottom: 0.5px solid var(--border-light); font-size: 12px; align-items: flex-start; transition: background 0.1s; }
+  .audit-row:last-child { border-bottom: none; }
+  .audit-row:hover { background: var(--bg-secondary); }
+  .audit-time { color: var(--text-tertiary); flex-shrink: 0; width: 50px; font-size: 11px; padding-top: 1px; }
+  .audit-user { color: var(--blue); font-weight: 600; flex-shrink: 0; width: 80px; }
+  .audit-user.sys { color: var(--text-tertiary); font-weight: 400; }
+  .audit-desc { color: var(--text-primary); flex: 1; }
+  .audit-tid { color: var(--text-tertiary); font-size: 11px; flex-shrink: 0; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 28px; right: 28px;
+    background: var(--blue); color: #fff;
+    padding: 12px 20px; border-radius: var(--radius-lg);
+    font-size: 13px; font-weight: 500;
+    z-index: 9999; opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transform: translateY(10px);
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* LOGIN PAGE */
+  .login-page {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--bg-tertiary);
+  }
+  .login-card {
+    background: var(--bg-primary); border: 0.5px solid var(--border-light);
+    border-radius: var(--radius-lg); padding: 40px; width: 380px;
+  }
+  .login-logo { font-size: 28px; font-weight: 700; letter-spacing: -1px; margin-bottom: 6px; }
+  .login-tagline { font-size: 13px; color: var(--text-secondary); margin-bottom: 28px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 5px; display: block; }
+  .form-input { width: 100%; border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); padding: 9px 12px; font-size: 13px; font-family: inherit; color: var(--text-primary); background: var(--bg-secondary); outline: none; transition: border-color 0.15s; }
+  .form-input:focus { border-color: var(--blue-mid); }
+  .login-btn { width: 100%; background: var(--blue); color: #fff; border: none; border-radius: var(--radius-md); padding: 10px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; margin-top: 6px; transition: background 0.1s; }
+  .login-btn:hover { background: #0C447C; }
+  .login-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
+  .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 0.5px; background: var(--border-light); }
+  .login-divider span { font-size: 11px; color: var(--text-tertiary); }
+  .google-btn { width: 100%; background: var(--bg-primary); color: var(--text-primary); border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); padding: 10px; font-size: 13px; cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.1s; }
+  .google-btn:hover { background: var(--bg-secondary); }
+
+  @media (max-width: 900px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .kanban-cols { grid-template-columns: 1fr; }
+    .ticket-detail-layout { grid-template-columns: 1fr; }
+    .report-grid { grid-template-columns: 1fr; }
+    .report-kpi-row { grid-template-columns: 1fr 1fr; }
+    .rg2 { grid-template-columns: 1fr; }
+    .sidebar { width: 180px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MAIN APP (hidden initially, shown after login) -->
+<div class="app" id="app" style="display:none;">
+  <div class="topbar">
+    <div class="logo">staff<span class="blue">io</span><span class="co">· GP Courier</span></div>
+    <div class="topbar-right">
+      <span class="topbar-user">Marco Ferretti</span>
+      <div class="topbar-avatar">MF</div>
+      <button class="topbar-btn">Impostazioni</button>
+      <button class="topbar-btn danger" onclick="showLogin()">Esci</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Principale</div>
+        <div class="sidebar-item active" onclick="showPage('dashboard',this)" data-page="dashboard">
+          <span class="sidebar-icon">▦</span> Dashboard
+          <span class="sidebar-badge">19</span>
+        </div>
+        <div class="sidebar-item" data-page="kanban">
+          <span class="sidebar-icon">⋮⋮</span> Categorie
+        </div>
+        <div class="sidebar-item" onclick="showPage('ticket',this)" data-page="ticket">
+          <span class="sidebar-icon">✉</span> Ticket aperto
+        </div>
+      </div>
+      <div class="sidebar-section" style="margin-top:8px;">
+        <div class="sidebar-label">Analytics</div>
+        <div class="sidebar-item" onclick="showPage('report',this)" data-page="report">
+          <span class="sidebar-icon">↗</span> Report
+        </div>
+        <div class="sidebar-item" onclick="showPage('audit',this)" data-page="audit">
+          <span class="sidebar-icon">☰</span> Audit log
+        </div>
+        <div class="sidebar-item" onclick="showPage('database',this)" data-page="database">
+          <span class="sidebar-icon">⊡</span> Database
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <div><span class="sync-dot"></span><span class="sync-text">Sincronizzato · 14:38</span></div>
+        <div style="font-size:11px;color:var(--text-tertiary);margin-top:3px;">3 nuove email</div>
+      </div>
+    </nav>
+    <button class="sidebar-toggle" onclick="toggleSidebar()" title="Apri/chiudi menu">
+      <span class="toggle-arrow">‹</span>
+    </button>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Ticket totali oggi</div>
+            <div class="stat-val">34</div>
+            <div class="stat-sub">+8 rispetto a ieri</div>
+          </div>
+          <div class="stat-card" style="cursor:pointer;" onclick="navToKanban('da-gestire')">
+            <div class="stat-label">Da gestire</div>
+            <div class="stat-val red">24</div>
+            <div class="stat-sub">in stato "Nuovo"</div>
+          </div>
+<div class="stat-card" style="cursor:pointer;" onclick="navToKanban('urgenti')">
+            <div class="stat-label">Urgenti aperti</div>
+            <div class="stat-val amber">7</div>
+            <div class="stat-sub">segnalati dagli operatori</div>
+          </div>
+        </div>
+
+        <div class="section-title">Categorie</div>
+        <div class="cat-grid">
+          <div class="cat-card c-red" onclick="navToKanban('spedizioni')">
+            <div class="cat-card-top"><div class="cat-icon">🚚</div><div class="cat-count red">7</div></div>
+            <div><div class="cat-name">Spedizioni</div><div class="cat-sub">3 in scadenza</div></div>
+          </div>
+          <div class="cat-card c-amber" onclick="navToKanban('ritiri')">
+            <div class="cat-card-top"><div class="cat-icon">📦</div><div class="cat-count amber">4</div></div>
+            <div><div class="cat-name">Ritiri</div><div class="cat-sub">1 urgente</div></div>
+          </div>
+          <div class="cat-card c-red" onclick="navToKanban('giacenze')">
+            <div class="cat-card-top"><div class="cat-icon">🏭</div><div class="cat-count red">3</div></div>
+            <div><div class="cat-name">Giacenze</div><div class="cat-sub">nessuna scadenza</div></div>
+          </div>
+          <div class="cat-card c-red" onclick="navToKanban('reclami')">
+            <div class="cat-card-top"><div class="cat-icon">⚠️</div><div class="cat-count red">2</div></div>
+            <div><div class="cat-name">Reclami</div><div class="cat-sub">SLA 4h · 1 scaduto</div></div>
+          </div>
+          <div class="cat-card c-zero" onclick="navToKanban('fatturazione')">
+            <div class="cat-card-top"><div class="cat-icon">💶</div><div class="cat-count zero">0</div></div>
+            <div><div class="cat-name">Fatturazione</div><div class="cat-sub">tutto gestito</div></div>
+          </div>
+          <div class="cat-card c-amber" onclick="navToKanban('preventivi')">
+            <div class="cat-card-top"><div class="cat-icon">📋</div><div class="cat-count amber">2</div></div>
+            <div><div class="cat-name">Preventivi</div><div class="cat-sub">in attesa risposta</div></div>
+          </div>
+          <div class="cat-card c-amber" onclick="navToKanban('doganale')">
+            <div class="cat-card-top"><div class="cat-icon">📄</div><div class="cat-count amber">1</div></div>
+            <div><div class="cat-name">Doc. doganale</div><div class="cat-sub">da verificare</div></div>
+          </div>
+          <div class="cat-card c-zero" onclick="navToKanban('dipendenti')">
+            <div class="cat-card-top"><div class="cat-icon">👤</div><div class="cat-count zero">0</div></div>
+            <div><div class="cat-name">Richieste dip.</div><div class="cat-sub">tutto gestito</div></div>
+          </div>
+          <div class="cat-card c-amber" onclick="navToKanban('altro')">
+            <div class="cat-card-top"><div class="cat-icon">📁</div><div class="cat-count amber">1</div></div>
+            <div><div class="cat-name">Altro</div><div class="cat-sub">non categorizzato</div></div>
+          </div>
+          <div class="cat-card c-zero" style="opacity:0.6;" onclick="navToKanban('spam')">
+            <div class="cat-card-top"><div class="cat-icon">🗑️</div><div class="cat-count zero">12</div></div>
+            <div><div class="cat-name">Ignora / Spam</div><div class="cat-sub">newsletter, bot</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div class="page" id="page-analytics">
+        <div class="page-title">Analytics</div>
+        <div class="page-sub" style="margin-bottom:20px;">Metriche operative · GP Courier</div>
+        <div class="stats-row" style="grid-template-columns: repeat(1, 320px);">
+          <div class="stat-card">
+            <div class="stat-label">Tempo medio risposta</div>
+            <div class="stat-val">1h 42m</div>
+            <div class="stat-sub">SLA obiettivo: 2h</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN SPEDIZIONI -->
+      <div class="page" id="page-kanban-spedizioni">
+        <div class="kanban-header">
+          <button class="back-btn" onclick="showPage('dashboard')">← Dashboard</button>
+          <div class="page-title" style="margin:0;">🚚 Spedizioni</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="toggleFilter(this)">Urgenti</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">In scadenza</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Miei</button>
+          </div>
+        </div>
+
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-header">
+              <span class="col-title">Nuovo</span>
+              <span class="col-count">7</span>
+            </div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Alfa Logistics Srl</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Mancata consegna ordine #8821 — contestazione</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:12</span>
+                <span class="ticket-sla over">SLA scaduto</span>
+              </div>
+            </div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Ferrero Import Sas</span></div>
+              <div class="ticket-subject">Aggiornamento ETA spedizione Milano-Torino</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:44</span>
+                <span class="ticket-sla warn">Scade 12:44</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Bianchi & Co.</span></div>
+              <div class="ticket-subject">Richiesta tracking pacco ref. BC-2024-113</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 11:20</span>
+                <span class="ticket-sla ok">Entro 13:20</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Tecnolux Srl</span></div>
+              <div class="ticket-subject">Modifiche destinazione spedizione urgente</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 13:05</span>
+                <span class="ticket-sla ok">Entro 15:05</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="kanban-col">
+            <div class="col-header">
+              <span class="col-title">In corso</span>
+              <span class="col-count">3</span>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Vitramed Srl</span></div>
+              <div class="ticket-subject">Documenti doganali mancanti — invio urgente</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri 11:00</span>
+                <span class="ticket-sla ok">In corso</span>
+              </div>
+            </div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">GreenBox Ecommerce</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Reclamo spedizione danneggiata — foto allegate</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri 14:10</span>
+                <span class="ticket-sla warn">In lavorazione</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Romano Distributori</span></div>
+              <div class="ticket-subject">Conferma orario consegna per domani mattina</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri 16:30</span>
+                <span class="ticket-sla ok">In lavorazione</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="kanban-col">
+            <div class="col-header">
+              <span class="col-title">Completato</span>
+              <span class="col-count">12</span>
+            </div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Delta Trading</span></div>
+              <div class="ticket-subject">Conferma ricezione merce — OK</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">2 giorni fa</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Acqua Pura Srl</span></div>
+              <div class="ticket-subject">Modifica indirizzo consegna settimanale</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">2 giorni fa</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Pronto Moda SpA</span></div>
+              <div class="ticket-subject">Richiesta preventivo mensile spedizioni</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN RITIRI -->
+      <div class="page" id="page-kanban-ritiri">
+        <div class="kanban-header">
+          <button class="back-btn" onclick="showPage('dashboard')">← Dashboard</button>
+          <div class="page-title" style="margin:0;">📦 Ritiri</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="toggleFilter(this)">Urgenti</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">In scadenza</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Miei</button>
+          </div>
+        </div>
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Nuovo</span><span class="col-count">4</span></div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Manzotti Forniture</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Ritiro oggi entro le 17 — 8 pallet</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:30</span>
+                <span class="ticket-sla warn">Scade 17:00</span>
+              </div>
+            </div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Ceramiche Veneto</span></div>
+              <div class="ticket-subject">Richiesta ritiro settimanale — conferma slot</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:15</span>
+                <span class="ticket-sla warn">Scade 14:15</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Moda Uno Srl</span></div>
+              <div class="ticket-subject">Ritiro reso cliente finale Milano</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 11:02</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Officine Brescia</span></div>
+              <div class="ticket-subject">Ritiro ricambi — richiesta conferma indirizzo</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 12:40</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">In corso</span><span class="col-count">2</span></div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Panetti Editore</span></div>
+              <div class="ticket-subject">Tentativo fallito — riprogrammare domani</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri 17:20</span>
+                <span class="ticket-sla warn">Da riprogrammare</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Arredi Toscana</span></div>
+              <div class="ticket-subject">Corriere assegnato — ritiro programmato 15:00</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 08:45</span>
+                <span class="ticket-sla ok">In lavorazione</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Completato</span><span class="col-count">9</span></div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Rossi Metalli</span></div>
+              <div class="ticket-subject">Ritiro ricambi completato</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">2 giorni fa</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Gelati Polare</span></div>
+              <div class="ticket-subject">Ritiro effettuato — POD firmato</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Libreria Aurora</span></div>
+              <div class="ticket-subject">3 colli ritirati — OK</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN GIACENZE -->
+      <div class="page" id="page-kanban-giacenze">
+        <div class="kanban-header">
+          <button class="back-btn" onclick="showPage('dashboard')">← Dashboard</button>
+          <div class="page-title" style="margin:0;">🏭 Giacenze</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="toggleFilter(this)">Urgenti</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Oltre 10gg</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Miei</button>
+          </div>
+        </div>
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Nuovo</span><span class="col-count">3</span></div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Magazzino Bologna</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Pacco in giacenza da 14gg — ref. MB-4412</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 08:55</span>
+                <span class="ticket-sla over">SLA oltre soglia</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Hub Milano Est</span></div>
+              <div class="ticket-subject">3 colli destinatario assente — contattare mittente</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:10</span>
+                <span class="ticket-sla ok">Entro 48h</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Deposito Napoli</span></div>
+              <div class="ticket-subject">Merce rifiutata — richiesta istruzioni</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 11:35</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">In corso</span><span class="col-count">2</span></div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Vetreria Murano</span></div>
+              <div class="ticket-subject">Mittente contattato — attesa nuovo indirizzo</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">2 giorni fa</span>
+                <span class="ticket-sla warn">Sollecitare</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Pellegrini Food</span></div>
+              <div class="ticket-subject">Riconsegna programmata giovedì</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">In attesa cliente</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Completato</span><span class="col-count">5</span></div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Farmacia Centrale</span></div>
+              <div class="ticket-subject">Rispedito al mittente</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">3 giorni fa</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Stampa & Media</span></div>
+              <div class="ticket-subject">Riconsegnato con successo</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN RECLAMI -->
+      <div class="page" id="page-kanban-reclami">
+        <div class="kanban-header">
+          <button class="back-btn" onclick="showPage('dashboard')">← Dashboard</button>
+          <div class="page-title" style="margin:0;">⚠️ Reclami</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="toggleFilter(this)">SLA scaduto</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Gravi</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Miei</button>
+          </div>
+        </div>
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Nuovo</span><span class="col-count">2</span></div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Trentini Mobili</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Pacco arrivato danneggiato — merce rotta</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 08:20</span>
+                <span class="ticket-sla over">SLA scaduto</span>
+              </div>
+            </div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Calzature Venier</span></div>
+              <div class="ticket-subject">Merce non corrispondente al DDT</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:50</span>
+                <span class="ticket-sla warn">Scade 14:50</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">In corso</span><span class="col-count">3</span></div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Delizie Siciliane</span></div>
+              <div class="ticket-subject">Catena del freddo interrotta — merce deteriorata</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">2 giorni fa</span>
+                <span class="ticket-sla ok">Perito assegnato</span>
+              </div>
+            </div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Gioielleria Luna</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Smarrimento pacco valore — indagine aperta</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri 09:00</span>
+                <span class="ticket-sla warn">In investigazione</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Gomme Adriatico</span></div>
+              <div class="ticket-subject">Ritardo consegna oltre 4gg — richiesto rimborso</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri 14:30</span>
+                <span class="ticket-sla ok">In valutazione</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Completato</span><span class="col-count">7</span></div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Hobby Creativi</span></div>
+              <div class="ticket-subject">Sostituzione merce spedita</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">3 giorni fa</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Libri & C.</span></div>
+              <div class="ticket-subject">Rimborso accettato — pratica chiusa</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN FATTURAZIONE -->
+      <div class="page" id="page-kanban-fatturazione">
+        <div class="kanban-header">
+          <button class="back-btn" onclick="showPage('dashboard')">← Dashboard</button>
+          <div class="page-title" style="margin:0;">💶 Fatturazione</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="toggleFilter(this)">Da emettere</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Note credito</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Miei</button>
+          </div>
+        </div>
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Nuovo</span><span class="col-count">2</span></div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Meridiana SpA</span></div>
+              <div class="ticket-subject">Richiesta copia fattura n. 2025/0142</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:45</span>
+                <span class="ticket-sla ok">Entro 48h</span>
+              </div>
+            </div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Elettrica Veneta</span></div>
+              <div class="ticket-subject">Errore partita IVA in fattura — richiesta correzione</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 11:10</span>
+                <span class="ticket-sla warn">Scade domani</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">In corso</span><span class="col-count">2</span></div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Arte & Design</span></div>
+              <div class="ticket-subject">Nota di credito in emissione — reso approvato</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">In lavorazione</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Gruppo Ferrari Log</span></div>
+              <div class="ticket-subject">Riepilogo mensile in preparazione</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">In lavorazione</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Completato</span><span class="col-count">11</span></div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Pasticceria Luna</span></div>
+              <div class="ticket-subject">Pagamento ricevuto — fattura saldata</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">2 giorni fa</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Tessuti Como</span></div>
+              <div class="ticket-subject">Fattura emessa e inviata SDI</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN PREVENTIVI -->
+      <div class="page" id="page-kanban-preventivi">
+        <div class="kanban-header">
+          <button class="back-btn" onclick="showPage('dashboard')">← Dashboard</button>
+          <div class="page-title" style="margin:0;">📋 Preventivi</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="toggleFilter(this)">In attesa</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Gare</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Miei</button>
+          </div>
+        </div>
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Nuovo</span><span class="col-count">3</span></div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Wellness Store Srl</span></div>
+              <div class="ticket-subject">Preventivo spedizioni mensili ~200 colli</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:20</span>
+                <span class="ticket-sla warn">Scade 14:20</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Casa Verde Giardinaggio</span></div>
+              <div class="ticket-subject">Richiesta tariffa tratte Milano-Roma</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 11:05</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Bioplastica Srl</span></div>
+              <div class="ticket-subject">Preventivo pallet refrigerati</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 13:15</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">In corso</span><span class="col-count">2</span></div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Gruppo Alimentare Sud</span></div>
+              <div class="ticket-subject">Contratto annuale — bozza in revisione</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">In trattativa</span>
+              </div>
+            </div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">MedTech Italia</span></div>
+              <div class="ticket-subject">Gara pubblica — documenti da integrare</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla warn">Scadenza venerdì</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Completato</span><span class="col-count">6</span></div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">E-shop Moda Junior</span></div>
+              <div class="ticket-subject">Preventivo inviato — in attesa risposta cliente</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">3 giorni fa</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Artigiani Toscana</span></div>
+              <div class="ticket-subject">Preventivo accettato — attivazione in corso</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN DOC. DOGANALE -->
+      <div class="page" id="page-kanban-doganale">
+        <div class="kanban-header">
+          <button class="back-btn" onclick="showPage('dashboard')">← Dashboard</button>
+          <div class="page-title" style="margin:0;">📄 Doc. doganale</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="toggleFilter(this)">Da verificare</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Export</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Miei</button>
+          </div>
+        </div>
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Nuovo</span><span class="col-count">2</span></div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Vinitalia Export</span></div>
+              <div class="ticket-subject">Fattura proforma da integrare per spedizione USA</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:10</span>
+                <span class="ticket-sla warn">Scade 15:10</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">TechImport Srl</span></div>
+              <div class="ticket-subject">Packing list mancante per import CN</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:45</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">In corso</span><span class="col-count">2</span></div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Olivi del Salento</span></div>
+              <div class="ticket-subject">DAU in compilazione — spedizione CH</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">In lavorazione</span>
+              </div>
+            </div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Marmi di Carrara Intl</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Blocco dogana UK — codici HS da correggere</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla warn">In sblocco</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Completato</span><span class="col-count">4</span></div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Illumina Lamps</span></div>
+              <div class="ticket-subject">Import sdoganato — merce in consegna</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">2 giorni fa</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Pasta Verdi Intl</span></div>
+              <div class="ticket-subject">Documenti export USA trasmessi</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN RICHIESTE DIPENDENTI -->
+      <div class="page" id="page-kanban-dipendenti">
+        <div class="kanban-header">
+          <button class="back-btn" onclick="showPage('dashboard')">← Dashboard</button>
+          <div class="page-title" style="margin:0;">👤 Richieste dipendenti</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="toggleFilter(this)">Da approvare</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Ferie</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Miei</button>
+          </div>
+        </div>
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Nuovo</span><span class="col-count">2</span></div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Marco Valli — Magazzino</span></div>
+              <div class="ticket-subject">Richiesta ferie 12-16 maggio</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:00</span>
+                <span class="ticket-sla ok">Entro settimana</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Laura Pini — Customer Service</span></div>
+              <div class="ticket-subject">Permesso personale 2 ore — giovedì</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:30</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">In corso</span><span class="col-count">1</span></div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Giovanni Rosa — Autisti</span></div>
+              <div class="ticket-subject">Rimborso spese carburante marzo — verifica ricevute</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">In verifica</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Completato</span><span class="col-count">8</span></div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Paolo Ferri — Magazzino</span></div>
+              <div class="ticket-subject">Richiesta turno notturno accettata</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">3 giorni fa</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Chiara Donati — HR</span></div>
+              <div class="ticket-subject">Ferie approvate 3-7 aprile</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN ALTRO -->
+      <div class="page" id="page-kanban-altro">
+        <div class="kanban-header">
+          <button class="back-btn" onclick="showPage('dashboard')">← Dashboard</button>
+          <div class="page-title" style="margin:0;">📁 Altro</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="toggleFilter(this)">Da classificare</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Interni</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Miei</button>
+          </div>
+        </div>
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Nuovo</span><span class="col-count">2</span></div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Studio Legale Bruni</span></div>
+              <div class="ticket-subject">Comunicazione variazione dati bancari fornitore</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:00</span>
+                <span class="ticket-sla ok">Entro 48h</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Assofornitori</span></div>
+              <div class="ticket-subject">Invito evento settore — richiesta referente</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 12:15</span>
+                <span class="ticket-sla ok">Entro settimana</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">In corso</span><span class="col-count">1</span></div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Comune di Parma</span></div>
+              <div class="ticket-subject">Permesso ZTL per furgoni — integrazione documenti</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri</span>
+                <span class="ticket-sla ok">In lavorazione</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Completato</span><span class="col-count">3</span></div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Agenzia Marketing</span></div>
+              <div class="ticket-subject">Rinnovo contratto annunci — firmato</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">3 giorni fa</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+            <div class="ticket-card done" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Associazione Corrieri</span></div>
+              <div class="ticket-subject">Questionario annuale compilato</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">2 giorni fa</span>
+                <span class="ticket-sla ok">Chiuso</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN DA GESTIRE (aggregato dai "Nuovo" di tutte le categorie) -->
+      <div class="page" id="page-kanban-da-gestire">
+        <div class="kanban-header">
+          <button class="back-btn" onclick="showPage('dashboard')">← Dashboard</button>
+          <div class="page-title" style="margin:0;">📥 Da gestire</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="toggleFilter(this)">Tutti</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Solo urgenti</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Miei</button>
+          </div>
+        </div>
+        <div class="kanban-cols">
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Urgenti · SLA scaduto</span><span class="col-count">4</span></div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Trentini Mobili</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Pacco arrivato danneggiato — merce rotta</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 08:20 · ⚠️ Reclami</span>
+                <span class="ticket-sla over">SLA scaduto</span>
+              </div>
+            </div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Magazzino Bologna</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Pacco in giacenza da 14gg — ref. MB-4412</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 08:55 · 🏭 Giacenze</span>
+                <span class="ticket-sla over">SLA oltre soglia</span>
+              </div>
+            </div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Alfa Logistics Srl</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Mancata consegna ordine #8821 — contestazione</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:12 · 🚚 Spedizioni</span>
+                <span class="ticket-sla over">SLA scaduto</span>
+              </div>
+            </div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Manzotti Forniture</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Ritiro oggi entro le 17 — 8 pallet</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:30 · 📦 Ritiri</span>
+                <span class="ticket-sla warn">Scade 17:00</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">In scadenza</span><span class="col-count">6</span></div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Vinitalia Export</span></div>
+              <div class="ticket-subject">Fattura proforma da integrare per spedizione USA</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:10 · 📄 Doc. doganale</span>
+                <span class="ticket-sla warn">Scade 15:10</span>
+              </div>
+            </div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Wellness Store Srl</span></div>
+              <div class="ticket-subject">Preventivo spedizioni mensili ~200 colli</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:20 · 📋 Preventivi</span>
+                <span class="ticket-sla warn">Scade 14:20</span>
+              </div>
+            </div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Ceramiche Veneto</span></div>
+              <div class="ticket-subject">Richiesta ritiro settimanale — conferma slot</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:15 · 📦 Ritiri</span>
+                <span class="ticket-sla warn">Scade 14:15</span>
+              </div>
+            </div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Ferrero Import Sas</span></div>
+              <div class="ticket-subject">Aggiornamento ETA spedizione Milano-Torino</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:44 · 🚚 Spedizioni</span>
+                <span class="ticket-sla warn">Scade 12:44</span>
+              </div>
+            </div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Calzature Venier</span></div>
+              <div class="ticket-subject">Merce non corrispondente al DDT</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:50 · ⚠️ Reclami</span>
+                <span class="ticket-sla warn">Scade 14:50</span>
+              </div>
+            </div>
+            <div class="ticket-card warn" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Elettrica Veneta</span></div>
+              <div class="ticket-subject">Errore partita IVA in fattura — richiesta correzione</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 11:10 · 💶 Fatturazione</span>
+                <span class="ticket-sla warn">Scade domani</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Entro 24h</span><span class="col-count">14</span></div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Marco Valli — Magazzino</span></div>
+              <div class="ticket-subject">Richiesta ferie 12-16 maggio</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:00 · 👤 Richieste dip.</span>
+                <span class="ticket-sla ok">Entro settimana</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Meridiana SpA</span></div>
+              <div class="ticket-subject">Richiesta copia fattura n. 2025/0142</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:45 · 💶 Fatturazione</span>
+                <span class="ticket-sla ok">Entro 48h</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Studio Legale Bruni</span></div>
+              <div class="ticket-subject">Comunicazione variazione dati bancari fornitore</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:00 · 📁 Altro</span>
+                <span class="ticket-sla ok">Entro 48h</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Hub Milano Est</span></div>
+              <div class="ticket-subject">3 colli destinatario assente — contattare mittente</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:10 · 🏭 Giacenze</span>
+                <span class="ticket-sla ok">Entro 48h</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Laura Pini — Customer Service</span></div>
+              <div class="ticket-subject">Permesso personale 2 ore — giovedì</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:30 · 👤 Richieste dip.</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">TechImport Srl</span></div>
+              <div class="ticket-subject">Packing list mancante per import CN</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:45 · 📄 Doc. doganale</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Moda Uno Srl</span></div>
+              <div class="ticket-subject">Ritiro reso cliente finale Milano</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 11:02 · 📦 Ritiri</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Casa Verde Giardinaggio</span></div>
+              <div class="ticket-subject">Richiesta tariffa tratte Milano-Roma</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 11:05 · 📋 Preventivi</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Bianchi & Co.</span></div>
+              <div class="ticket-subject">Richiesta tracking pacco ref. BC-2024-113</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 11:20 · 🚚 Spedizioni</span>
+                <span class="ticket-sla ok">Entro 13:20</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Deposito Napoli</span></div>
+              <div class="ticket-subject">Merce rifiutata — richiesta istruzioni</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 11:35 · 🏭 Giacenze</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Assofornitori</span></div>
+              <div class="ticket-subject">Invito evento settore — richiesta referente</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 12:15 · 📁 Altro</span>
+                <span class="ticket-sla ok">Entro settimana</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Officine Brescia</span></div>
+              <div class="ticket-subject">Ritiro ricambi — richiesta conferma indirizzo</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 12:40 · 📦 Ritiri</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Tecnolux Srl</span></div>
+              <div class="ticket-subject">Modifiche destinazione spedizione urgente</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 13:05 · 🚚 Spedizioni</span>
+                <span class="ticket-sla ok">Entro 15:05</span>
+              </div>
+            </div>
+            <div class="ticket-card" onclick="navToTicket()">
+              <div class="ticket-top-row"><span class="ticket-sender">Bioplastica Srl</span></div>
+              <div class="ticket-subject">Preventivo pallet refrigerati</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 13:15 · 📋 Preventivi</span>
+                <span class="ticket-sla ok">Entro domani</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN URGENTI APERTI (aggregato degli URGENTE non chiusi) -->
+      <div class="page" id="page-kanban-urgenti">
+        <div class="kanban-header">
+          <button class="back-btn" onclick="showPage('dashboard')">← Dashboard</button>
+          <div class="page-title" style="margin:0;">🔥 Urgenti aperti</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="toggleFilter(this)">Tutti</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">SLA scaduto</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Miei</button>
+          </div>
+        </div>
+        <div class="kanban-cols" style="grid-template-columns: repeat(2, 1fr);">
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">Nuovo</span><span class="col-count">4</span></div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Trentini Mobili</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Pacco arrivato danneggiato — merce rotta</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 08:20 · ⚠️ Reclami</span>
+                <span class="ticket-sla over">SLA scaduto</span>
+              </div>
+            </div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Magazzino Bologna</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Pacco in giacenza da 14gg — ref. MB-4412</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 08:55 · 🏭 Giacenze</span>
+                <span class="ticket-sla over">SLA oltre soglia</span>
+              </div>
+            </div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Alfa Logistics Srl</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Mancata consegna ordine #8821 — contestazione</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:12 · 🚚 Spedizioni</span>
+                <span class="ticket-sla over">SLA scaduto</span>
+              </div>
+            </div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Manzotti Forniture</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Ritiro oggi entro le 17 — 8 pallet</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:30 · 📦 Ritiri</span>
+                <span class="ticket-sla warn">Scade 17:00</span>
+              </div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="col-header"><span class="col-title">In corso</span><span class="col-count">3</span></div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Marmi di Carrara Intl</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Blocco dogana UK — codici HS da correggere</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri · 📄 Doc. doganale</span>
+                <span class="ticket-sla warn">In sblocco</span>
+              </div>
+            </div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">Gioielleria Luna</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Smarrimento pacco valore — indagine aperta</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri 09:00 · ⚠️ Reclami</span>
+                <span class="ticket-sla warn">In investigazione</span>
+              </div>
+            </div>
+            <div class="ticket-card urgent" onclick="navToTicket()">
+              <div class="ticket-top-row">
+                <span class="ticket-sender">GreenBox Ecommerce</span>
+                <span class="ticket-urgent-tag">URGENTE</span>
+              </div>
+              <div class="ticket-subject">Reclamo spedizione danneggiata — foto allegate</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">ieri 14:10 · 🚚 Spedizioni</span>
+                <span class="ticket-sla warn">In lavorazione</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN SPAM -->
+      <div class="page" id="page-kanban-spam">
+        <div class="kanban-header">
+          <button class="back-btn" onclick="showPage('dashboard')">← Dashboard</button>
+          <div class="page-title" style="margin:0;">🗑️ Ignora / Spam</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="toggleFilter(this)">Tutti</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Newsletter</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Bot / Promo</button>
+          </div>
+        </div>
+        <div class="kanban-cols" style="grid-template-columns: 1fr;">
+          <div class="kanban-col">
+            <div class="col-header">
+              <span class="col-title">Email in spam — reindirizza manualmente</span>
+              <span class="col-count">12</span>
+            </div>
+            <div class="ticket-card" style="cursor:default;">
+              <div class="ticket-top-row"><span class="ticket-sender">newsletter@mailchimp-promo.com</span></div>
+              <div class="ticket-subject">🎉 Black Friday! 70% off su software gestionali</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 07:14 · newsletter</span>
+                <select class="spam-move" onchange="moveSpam(this)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;">
+                  <option value="">Sposta in…</option>
+                  <option value="spedizioni">🚚 Spedizioni</option>
+                  <option value="ritiri">📦 Ritiri</option>
+                  <option value="giacenze">🏭 Giacenze</option>
+                  <option value="reclami">⚠️ Reclami</option>
+                  <option value="fatturazione">💶 Fatturazione</option>
+                  <option value="preventivi">📋 Preventivi</option>
+                  <option value="doganale">📄 Doc. doganale</option>
+                  <option value="dipendenti">👤 Richieste dip.</option>
+                  <option value="altro">📁 Altro</option>
+                </select>
+              </div>
+            </div>
+            <div class="ticket-card" style="cursor:default;">
+              <div class="ticket-top-row"><span class="ticket-sender">noreply@linkedin.com</span></div>
+              <div class="ticket-subject">Hai 14 nuove visualizzazioni sul profilo</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 07:45 · social</span>
+                <select class="spam-move" onchange="moveSpam(this)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;">
+                  <option value="">Sposta in…</option>
+                  <option value="spedizioni">🚚 Spedizioni</option>
+                  <option value="ritiri">📦 Ritiri</option>
+                  <option value="giacenze">🏭 Giacenze</option>
+                  <option value="reclami">⚠️ Reclami</option>
+                  <option value="fatturazione">💶 Fatturazione</option>
+                  <option value="preventivi">📋 Preventivi</option>
+                  <option value="doganale">📄 Doc. doganale</option>
+                  <option value="dipendenti">👤 Richieste dip.</option>
+                  <option value="altro">📁 Altro</option>
+                </select>
+              </div>
+            </div>
+            <div class="ticket-card" style="cursor:default;">
+              <div class="ticket-top-row"><span class="ticket-sender">offerte@telecom-business.it</span></div>
+              <div class="ticket-subject">Nuova offerta fibra business 1Gb a 29€/mese</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 08:02 · promo</span>
+                <select class="spam-move" onchange="moveSpam(this)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;">
+                  <option value="">Sposta in…</option>
+                  <option value="spedizioni">🚚 Spedizioni</option>
+                  <option value="ritiri">📦 Ritiri</option>
+                  <option value="giacenze">🏭 Giacenze</option>
+                  <option value="reclami">⚠️ Reclami</option>
+                  <option value="fatturazione">💶 Fatturazione</option>
+                  <option value="preventivi">📋 Preventivi</option>
+                  <option value="doganale">📄 Doc. doganale</option>
+                  <option value="dipendenti">👤 Richieste dip.</option>
+                  <option value="altro">📁 Altro</option>
+                </select>
+              </div>
+            </div>
+            <div class="ticket-card" style="cursor:default;">
+              <div class="ticket-top-row"><span class="ticket-sender">info@corsi-formazione-pro.it</span></div>
+              <div class="ticket-subject">Diventa manager logistico in 30 giorni — iscriviti!</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 08:31 · promo</span>
+                <select class="spam-move" onchange="moveSpam(this)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;">
+                  <option value="">Sposta in…</option>
+                  <option value="spedizioni">🚚 Spedizioni</option>
+                  <option value="ritiri">📦 Ritiri</option>
+                  <option value="giacenze">🏭 Giacenze</option>
+                  <option value="reclami">⚠️ Reclami</option>
+                  <option value="fatturazione">💶 Fatturazione</option>
+                  <option value="preventivi">📋 Preventivi</option>
+                  <option value="doganale">📄 Doc. doganale</option>
+                  <option value="dipendenti">👤 Richieste dip.</option>
+                  <option value="altro">📁 Altro</option>
+                </select>
+              </div>
+            </div>
+            <div class="ticket-card" style="cursor:default;">
+              <div class="ticket-top-row"><span class="ticket-sender">events@fiere-milano.it</span></div>
+              <div class="ticket-subject">Invito — Fiera Logistica 2025, padiglione 4</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 08:50 · evento</span>
+                <select class="spam-move" onchange="moveSpam(this)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;">
+                  <option value="">Sposta in…</option>
+                  <option value="spedizioni">🚚 Spedizioni</option>
+                  <option value="ritiri">📦 Ritiri</option>
+                  <option value="giacenze">🏭 Giacenze</option>
+                  <option value="reclami">⚠️ Reclami</option>
+                  <option value="fatturazione">💶 Fatturazione</option>
+                  <option value="preventivi">📋 Preventivi</option>
+                  <option value="doganale">📄 Doc. doganale</option>
+                  <option value="dipendenti">👤 Richieste dip.</option>
+                  <option value="altro">📁 Altro</option>
+                </select>
+              </div>
+            </div>
+            <div class="ticket-card" style="cursor:default;">
+              <div class="ticket-top-row"><span class="ticket-sender">partnership@seo-top10.com</span></div>
+              <div class="ticket-subject">Posizioniamo il tuo sito in prima pagina Google</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:15 · bot</span>
+                <select class="spam-move" onchange="moveSpam(this)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;">
+                  <option value="">Sposta in…</option>
+                  <option value="spedizioni">🚚 Spedizioni</option>
+                  <option value="ritiri">📦 Ritiri</option>
+                  <option value="giacenze">🏭 Giacenze</option>
+                  <option value="reclami">⚠️ Reclami</option>
+                  <option value="fatturazione">💶 Fatturazione</option>
+                  <option value="preventivi">📋 Preventivi</option>
+                  <option value="doganale">📄 Doc. doganale</option>
+                  <option value="dipendenti">👤 Richieste dip.</option>
+                  <option value="altro">📁 Altro</option>
+                </select>
+              </div>
+            </div>
+            <div class="ticket-card" style="cursor:default;">
+              <div class="ticket-top-row"><span class="ticket-sender">newsletter@trasporti-mag.it</span></div>
+              <div class="ticket-subject">Rassegna settimanale logistica e trasporti — edizione #42</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 09:40 · newsletter</span>
+                <select class="spam-move" onchange="moveSpam(this)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;">
+                  <option value="">Sposta in…</option>
+                  <option value="spedizioni">🚚 Spedizioni</option>
+                  <option value="ritiri">📦 Ritiri</option>
+                  <option value="giacenze">🏭 Giacenze</option>
+                  <option value="reclami">⚠️ Reclami</option>
+                  <option value="fatturazione">💶 Fatturazione</option>
+                  <option value="preventivi">📋 Preventivi</option>
+                  <option value="doganale">📄 Doc. doganale</option>
+                  <option value="dipendenti">👤 Richieste dip.</option>
+                  <option value="altro">📁 Altro</option>
+                </select>
+              </div>
+            </div>
+            <div class="ticket-card" style="cursor:default;">
+              <div class="ticket-top-row"><span class="ticket-sender">bot-trading@forex-fast.com</span></div>
+              <div class="ticket-subject">+287% in 30 giorni con il nostro algoritmo!</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:22 · bot</span>
+                <select class="spam-move" onchange="moveSpam(this)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;">
+                  <option value="">Sposta in…</option>
+                  <option value="spedizioni">🚚 Spedizioni</option>
+                  <option value="ritiri">📦 Ritiri</option>
+                  <option value="giacenze">🏭 Giacenze</option>
+                  <option value="reclami">⚠️ Reclami</option>
+                  <option value="fatturazione">💶 Fatturazione</option>
+                  <option value="preventivi">📋 Preventivi</option>
+                  <option value="doganale">📄 Doc. doganale</option>
+                  <option value="dipendenti">👤 Richieste dip.</option>
+                  <option value="altro">📁 Altro</option>
+                </select>
+              </div>
+            </div>
+            <div class="ticket-card" style="cursor:default;">
+              <div class="ticket-top-row"><span class="ticket-sender">offers@amazon-business.it</span></div>
+              <div class="ticket-subject">Sconto 15% sul prossimo ordine di pallet e imballi</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 10:55 · promo</span>
+                <select class="spam-move" onchange="moveSpam(this)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;">
+                  <option value="">Sposta in…</option>
+                  <option value="spedizioni">🚚 Spedizioni</option>
+                  <option value="ritiri">📦 Ritiri</option>
+                  <option value="giacenze">🏭 Giacenze</option>
+                  <option value="reclami">⚠️ Reclami</option>
+                  <option value="fatturazione">💶 Fatturazione</option>
+                  <option value="preventivi">📋 Preventivi</option>
+                  <option value="doganale">📄 Doc. doganale</option>
+                  <option value="dipendenti">👤 Richieste dip.</option>
+                  <option value="altro">📁 Altro</option>
+                </select>
+              </div>
+            </div>
+            <div class="ticket-card" style="cursor:default;">
+              <div class="ticket-top-row"><span class="ticket-sender">commerciale@stampatori24.com</span></div>
+              <div class="ticket-subject">Biglietti da visita professionali a soli 9€</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 11:18 · promo</span>
+                <select class="spam-move" onchange="moveSpam(this)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;">
+                  <option value="">Sposta in…</option>
+                  <option value="spedizioni">🚚 Spedizioni</option>
+                  <option value="ritiri">📦 Ritiri</option>
+                  <option value="giacenze">🏭 Giacenze</option>
+                  <option value="reclami">⚠️ Reclami</option>
+                  <option value="fatturazione">💶 Fatturazione</option>
+                  <option value="preventivi">📋 Preventivi</option>
+                  <option value="doganale">📄 Doc. doganale</option>
+                  <option value="dipendenti">👤 Richieste dip.</option>
+                  <option value="altro">📁 Altro</option>
+                </select>
+              </div>
+            </div>
+            <div class="ticket-card" style="cursor:default;">
+              <div class="ticket-top-row"><span class="ticket-sender">no-reply@crm-saas.com</span></div>
+              <div class="ticket-subject">Il tuo trial gratuito scade domani — rinnova ora</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 11:48 · bot</span>
+                <select class="spam-move" onchange="moveSpam(this)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;">
+                  <option value="">Sposta in…</option>
+                  <option value="spedizioni">🚚 Spedizioni</option>
+                  <option value="ritiri">📦 Ritiri</option>
+                  <option value="giacenze">🏭 Giacenze</option>
+                  <option value="reclami">⚠️ Reclami</option>
+                  <option value="fatturazione">💶 Fatturazione</option>
+                  <option value="preventivi">📋 Preventivi</option>
+                  <option value="doganale">📄 Doc. doganale</option>
+                  <option value="dipendenti">👤 Richieste dip.</option>
+                  <option value="altro">📁 Altro</option>
+                </select>
+              </div>
+            </div>
+            <div class="ticket-card" style="cursor:default;">
+              <div class="ticket-top-row"><span class="ticket-sender">notifiche@socialmedia-hub.it</span></div>
+              <div class="ticket-subject">Recap settimanale — 48 interazioni sui tuoi post</div>
+              <div class="ticket-meta">
+                <span class="ticket-time">oggi 12:30 · social</span>
+                <select class="spam-move" onchange="moveSpam(this)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;">
+                  <option value="">Sposta in…</option>
+                  <option value="spedizioni">🚚 Spedizioni</option>
+                  <option value="ritiri">📦 Ritiri</option>
+                  <option value="giacenze">🏭 Giacenze</option>
+                  <option value="reclami">⚠️ Reclami</option>
+                  <option value="fatturazione">💶 Fatturazione</option>
+                  <option value="preventivi">📋 Preventivi</option>
+                  <option value="doganale">📄 Doc. doganale</option>
+                  <option value="dipendenti">👤 Richieste dip.</option>
+                  <option value="altro">📁 Altro</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TICKET DETAIL -->
+      <div class="page" id="page-ticket">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+          <button class="back-btn" onclick="showPage('kanban-spedizioni')">← Spedizioni</button>
+          <div id="td-sender-title" style="font-size:16px;font-weight:600;letter-spacing:-0.3px;">Alfa Logistics Srl</div>
+          <span id="td-subject-title" style="font-size:13px;color:var(--text-secondary);">Mancata consegna ordine #8821</span>
+          <div id="td-tags" style="margin-left:auto;display:flex;gap:6px;">
+            <span class="detail-tag urgente">● URGENTE</span>
+            <span class="detail-tag sla">SLA scaduto</span>
+          </div>
+        </div>
+
+        <div class="ticket-detail-layout">
+          <div class="ticket-main-col">
+            <div class="detail-header-card">
+              <div class="detail-from" id="td-from">Alfa Logistics Srl</div>
+              <div class="detail-email" id="td-email">logistica@alfalogistics.it · oggi 09:12 · Ticket #4421</div>
+              <div class="action-row">
+                <button class="action-btn" style="color:#A32D2D;border-color:#F09595;" onclick="showToast('Ticket già segnato come urgente')">● Urgente</button>
+                <button class="action-btn" onclick="showToast('Funzione disponibile nella versione completa')">Cambia categoria</button>
+                <button class="action-btn primary" onclick="showToast('Ticket spostato in «In corso»')">In corso →</button>
+                <button class="action-btn success" onclick="showToast('Ticket chiuso e spostato in «Completato»')">✓ Completato</button>
+              </div>
+            </div>
+
+            <div class="chat-area" id="td-chat">
+              <div class="chat-msg in">
+                <div class="chat-meta">Alfa Logistics Srl · 3 giorni fa, 11:20</div>
+                <div class="chat-bubble">Buongiorno, volevo sapere dove si trova la spedizione relativa all'ordine #8821 spedita lunedì scorso. Il cliente ci sta sollecitando. Grazie.</div>
+              </div>
+              <div class="chat-msg out">
+                <div class="chat-meta">Marco Ferretti · 3 giorni fa, 14:05</div>
+                <div class="chat-bubble">Buongiorno, stiamo verificando la situazione con il corriere e vi ricontatteremo entro fine giornata. Grazie per la pazienza.</div>
+              </div>
+              <div class="chat-msg in">
+                <div class="chat-meta">Alfa Logistics Srl · oggi 09:12</div>
+                <div class="chat-bubble">Il cliente non ha ancora ricevuto nulla. Siamo a 4 giorni di ritardo. Contestiamo formalmente la mancata consegna dell'ordine #8821. Allego documentazione d'ordine. Vogliamo sapere esattamente dove si trova la merce e chi è il responsabile.</div>
+              </div>
+            </div>
+
+            <div class="reply-box">
+              <div class="reply-label-row">
+                <span class="reply-label">Bozza risposta</span>
+                <span class="ai-badge">✦ Generata da AI</span>
+                <button class="regen-btn" onclick="showToast('Bozza rigenerata includendo storico cliente')">↻ Rigenera con storico cliente</button>
+              </div>
+              <textarea class="reply-textarea" id="replyText">Gentile team Alfa Logistics,
+
+ci scusiamo sinceramente per il disagio causato dal ritardo nella consegna dell'ordine #8821. Abbiamo immediatamente aperto una segnalazione prioritaria presso il corriere incaricato per localizzare la spedizione.
+
+Ci impegniamo a fornirvi un aggiornamento preciso entro le prossime 2 ore. In caso di conferma dello smarrimento, provvederemo secondo quanto previsto dal contratto di servizio.
+
+Restiamo a disposizione per qualsiasi ulteriore chiarimento.
+
+Cordiali saluti,
+Team GP Courier
+info@gpcourier.com</textarea>
+              <div class="reply-footer">
+                <div class="reply-footer-left">
+                  <button class="attach-btn" onclick="showToast('Pannello allegati — funzione disponibile nella versione completa')">📎 Allegati</button>
+                  <span class="from-label">da: info@gpcourier.com</span>
+                </div>
+                <div class="reply-footer-right">
+                  <button class="draft-btn" onclick="showToast('Bozza salvata')">Salva bozza</button>
+                  <button class="send-btn" onclick="sendReply()">Invia risposta ↗</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ticket-sidebar-col">
+            <div class="side-box">
+              <div class="side-box-title">Dettagli</div>
+              <div class="info-row"><span class="info-key">Categoria</span><span class="info-val" id="td-categoria">Spedizioni</span></div>
+              <div class="info-row"><span class="info-key">Stato</span><span class="info-val red" id="td-stato">Nuovo</span></div>
+              <div class="info-row"><span class="info-key">SLA</span><span class="info-val red" id="td-sla-val">Scaduto (2h)</span></div>
+              <div class="info-row"><span class="info-key">Aperto da</span><span class="info-val">5h 26m</span></div>
+              <div class="info-row"><span class="info-key">Messaggi</span><span class="info-val">3</span></div>
+              <div class="info-row"><span class="info-key">Ultimo tocco</span><span class="info-val">M. Ferretti</span></div>
+            </div>
+
+            <div class="side-box">
+              <div class="side-box-title" id="td-other-title">Altri ticket di Alfa Logistics</div>
+              <div style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;">3 Spedizioni · 1 Reclami</div>
+              <div class="other-ticket-item">
+                <div class="ot-subject">Ritardo consegna ordine #8744</div>
+                <div class="ot-meta">Spedizioni · chiuso · 12 gen</div>
+              </div>
+              <div class="other-ticket-item">
+                <div class="ot-subject">Reclamo merce danneggiata #7902</div>
+                <div class="ot-meta">Reclami · chiuso · 4 dic</div>
+              </div>
+              <div class="other-ticket-item">
+                <div class="ot-subject">Preventivo mensile Q4 2024</div>
+                <div class="ot-meta">Preventivi · chiuso · 18 nov</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REPORT -->
+      <div class="page" id="page-report">
+
+        <!-- Header -->
+        <div class="report-header">
+          <div>
+            <div class="page-title">Report</div>
+            <div class="page-sub">Settimana 13–19 gennaio 2025 · GP Courier</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;color:var(--text-tertiary);">Periodo</span>
+            <div class="report-period-pills">
+              <button class="report-period-pill rp-active">Settimana</button>
+              <button class="report-period-pill">Mese</button>
+              <button class="report-period-pill">Trimestre</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI -->
+        <div class="report-kpi-row">
+          <div class="report-kpi kpi-blue">
+            <div class="report-kpi-label">Ticket questa settimana</div>
+            <div class="report-kpi-value">126</div>
+            <div class="report-kpi-delta pos">↑ +12% vs settimana scorsa</div>
+          </div>
+          <div class="report-kpi kpi-green">
+            <div class="report-kpi-label">SLA rispettato</div>
+            <div class="report-kpi-value" style="color:var(--green);">87%</div>
+            <div class="report-kpi-delta pos">↑ +3pp vs scorsa</div>
+          </div>
+          <div class="report-kpi kpi-amber">
+            <div class="report-kpi-label">Tempo medio risposta</div>
+            <div class="report-kpi-value">1h 42m</div>
+            <div class="report-kpi-delta pos">↓ −8m vs scorsa</div>
+          </div>
+          <div class="report-kpi kpi-red">
+            <div class="report-kpi-label">Ticket urgenti gestiti</div>
+            <div class="report-kpi-value">19</div>
+            <div class="report-kpi-delta neg">↑ +4 vs scorsa</div>
+          </div>
+        </div>
+
+        <!-- Row 2: Ticket per categoria + Distribuzione stato -->
+        <div class="rg2">
+          <div class="report-card">
+            <div class="report-card-title">Ticket per categoria</div>
+            <div class="bar-row"><span class="bar-label">Spedizioni</span><div class="bar-track"><div class="bar-fill" style="width:80%;background:var(--blue);"></div></div><span class="bar-val">47</span></div>
+            <div class="bar-row"><span class="bar-label">Ritiri</span><div class="bar-track"><div class="bar-fill" style="width:44%;background:var(--blue);"></div></div><span class="bar-val">26</span></div>
+            <div class="bar-row"><span class="bar-label">Reclami</span><div class="bar-track"><div class="bar-fill" style="width:27%;background:var(--red);"></div></div><span class="bar-val">16</span></div>
+            <div class="bar-row"><span class="bar-label">Giacenze</span><div class="bar-track"><div class="bar-fill" style="width:22%;background:var(--blue);"></div></div><span class="bar-val">13</span></div>
+            <div class="bar-row"><span class="bar-label">Fatturazione</span><div class="bar-track"><div class="bar-fill" style="width:17%;background:var(--blue);"></div></div><span class="bar-val">10</span></div>
+            <div class="bar-row"><span class="bar-label">Preventivi</span><div class="bar-track"><div class="bar-fill" style="width:14%;background:var(--blue);"></div></div><span class="bar-val">8</span></div>
+            <div class="bar-row"><span class="bar-label">Altro</span><div class="bar-track"><div class="bar-fill" style="width:10%;background:var(--text-tertiary);"></div></div><span class="bar-val">6</span></div>
+          </div>
+
+          <div class="report-card">
+            <div class="report-card-title">Distribuzione per stato</div>
+            <div class="donut-wrap">
+              <div style="position:relative;flex-shrink:0;">
+                <div class="donut" style="background:conic-gradient(var(--green) 0% 68%, var(--blue) 68% 88%, var(--amber) 88% 100%);"></div>
+                <div class="donut-center">
+                  <div class="donut-center-val">126</div>
+                  <div class="donut-center-lbl">totali</div>
+                </div>
+              </div>
+              <div class="donut-legend">
+                <div class="donut-legend-row">
+                  <div class="donut-dot" style="background:var(--green);"></div>
+                  <span class="donut-legend-label">Completato</span>
+                  <span class="donut-legend-val">86</span>
+                  <span class="donut-legend-pct">68%</span>
+                </div>
+                <div class="donut-legend-row">
+                  <div class="donut-dot" style="background:var(--blue);"></div>
+                  <span class="donut-legend-label">In corso</span>
+                  <span class="donut-legend-val">25</span>
+                  <span class="donut-legend-pct">20%</span>
+                </div>
+                <div class="donut-legend-row">
+                  <div class="donut-dot" style="background:var(--amber);"></div>
+                  <span class="donut-legend-label">Nuovo</span>
+                  <span class="donut-legend-val">15</span>
+                  <span class="donut-legend-pct">12%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: Trend volumi (full width) -->
+        <div class="report-card rg-full">
+          <div class="report-card-title">Volumi ticket — ultime 7 settimane</div>
+          <div class="trend2">
+            <div class="t2-wrap">
+              <div class="t2-top">78</div>
+              <div class="t2-bar" style="height:68px;background:var(--bg-tertiary);"></div>
+              <div class="t2-lbl">25 nov</div>
+            </div>
+            <div class="t2-wrap">
+              <div class="t2-top">95</div>
+              <div class="t2-bar" style="height:83px;background:var(--bg-tertiary);"></div>
+              <div class="t2-lbl">2 dic</div>
+            </div>
+            <div class="t2-wrap">
+              <div class="t2-top">82</div>
+              <div class="t2-bar" style="height:72px;background:var(--bg-tertiary);"></div>
+              <div class="t2-lbl">9 dic</div>
+            </div>
+            <div class="t2-wrap">
+              <div class="t2-top">110</div>
+              <div class="t2-bar" style="height:96px;background:var(--bg-tertiary);"></div>
+              <div class="t2-lbl">16 dic</div>
+            </div>
+            <div class="t2-wrap">
+              <div class="t2-top">58</div>
+              <div class="t2-bar" style="height:51px;background:var(--bg-tertiary);"></div>
+              <div class="t2-lbl">23 dic</div>
+            </div>
+            <div class="t2-wrap">
+              <div class="t2-top">103</div>
+              <div class="t2-bar" style="height:90px;background:var(--blue-mid);"></div>
+              <div class="t2-lbl">6 gen</div>
+            </div>
+            <div class="t2-wrap">
+              <div class="t2-top" style="color:var(--blue);font-weight:700;">126</div>
+              <div class="t2-bar" style="height:110px;background:var(--blue);"></div>
+              <div class="t2-lbl t2-cur">13 gen ●</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 4: SLA per categoria + Performance operatori -->
+        <div class="rg2">
+          <div class="report-card">
+            <div class="report-card-title">SLA rispettato per categoria</div>
+            <div class="sla-bar-row">
+              <span class="sla-bar-label">Ritiri</span>
+              <div class="sla-bar-track"><div class="sla-bar-fill" style="width:96%;background:var(--green);"></div></div>
+              <span class="sla-bar-pct" style="color:var(--green);">96%</span>
+            </div>
+            <div class="sla-bar-row">
+              <span class="sla-bar-label">Spedizioni</span>
+              <div class="sla-bar-track"><div class="sla-bar-fill" style="width:91%;background:var(--green);"></div></div>
+              <span class="sla-bar-pct" style="color:var(--green);">91%</span>
+            </div>
+            <div class="sla-bar-row">
+              <span class="sla-bar-label">Fatturazione</span>
+              <div class="sla-bar-track"><div class="sla-bar-fill" style="width:88%;background:var(--green);"></div></div>
+              <span class="sla-bar-pct" style="color:var(--green);">88%</span>
+            </div>
+            <div class="sla-bar-row">
+              <span class="sla-bar-label">Preventivi</span>
+              <div class="sla-bar-track"><div class="sla-bar-fill" style="width:78%;background:var(--amber);"></div></div>
+              <span class="sla-bar-pct" style="color:var(--amber);">78%</span>
+            </div>
+            <div class="sla-bar-row">
+              <span class="sla-bar-label">Reclami</span>
+              <div class="sla-bar-track"><div class="sla-bar-fill" style="width:61%;background:var(--red);"></div></div>
+              <span class="sla-bar-pct" style="color:var(--red);">61%</span>
+            </div>
+            <div class="sla-bar-row">
+              <span class="sla-bar-label">Giacenze</span>
+              <div class="sla-bar-track"><div class="sla-bar-fill" style="width:54%;background:var(--red);"></div></div>
+              <span class="sla-bar-pct" style="color:var(--red);">54%</span>
+            </div>
+          </div>
+
+          <div class="report-card">
+            <div class="report-card-title">Performance operatori</div>
+            <div style="display:flex;gap:6px;margin-bottom:10px;">
+              <span style="font-size:10px;color:var(--text-tertiary);flex:1;text-align:right;margin-right:54px;">Ticket</span>
+              <span style="font-size:10px;color:var(--text-tertiary);width:44px;text-align:right;">T. medio</span>
+              <span style="font-size:10px;color:var(--text-tertiary);width:36px;text-align:right;">SLA</span>
+            </div>
+            <div class="op-table">
+              <div class="op-row">
+                <div class="op-av">MF</div>
+                <span class="op-name">M. Ferretti</span>
+                <div class="op-mini-track"><div class="op-mini-fill" style="width:100%;"></div></div>
+                <span class="op-col">42</span>
+                <span class="op-col">1h 28m</span>
+                <span class="op-sla good">94%</span>
+              </div>
+              <div class="op-row">
+                <div class="op-av">LR</div>
+                <span class="op-name">L. Rossi</span>
+                <div class="op-mini-track"><div class="op-mini-fill" style="width:90%;"></div></div>
+                <span class="op-col">38</span>
+                <span class="op-col">1h 51m</span>
+                <span class="op-sla good">89%</span>
+              </div>
+              <div class="op-row">
+                <div class="op-av">AC</div>
+                <span class="op-name">A. Conti</span>
+                <div class="op-mini-track"><div class="op-mini-fill" style="width:74%;"></div></div>
+                <span class="op-col">31</span>
+                <span class="op-col">2h 05m</span>
+                <span class="op-sla mid">81%</span>
+              </div>
+              <div class="op-row">
+                <div class="op-av" style="background:var(--amber-light);color:var(--amber);">FB</div>
+                <span class="op-name">F. Bianchi</span>
+                <div class="op-mini-track"><div class="op-mini-fill" style="width:36%;"></div></div>
+                <span class="op-col">15</span>
+                <span class="op-col">1h 44m</span>
+                <span class="op-sla good">87%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- AUDIT -->
+      <div class="page" id="page-audit">
+        <div class="page-title">Audit log</div>
+        <div class="page-sub">Ogni azione tracciata con operatore e timestamp</div>
+
+        <div class="audit-table">
+          <div class="audit-row">
+            <span class="audit-time">14:38</span>
+            <span class="audit-user">M. Ferretti</span>
+            <span class="audit-desc">Aperto ticket #4421 — Alfa Logistics Srl</span>
+            <span class="audit-tid">#4421</span>
+          </div>
+          <div class="audit-row">
+            <span class="audit-time">14:35</span>
+            <span class="audit-user">L. Rossi</span>
+            <span class="audit-desc">Ticket spostato in "Completato" — Romano Distributori</span>
+            <span class="audit-tid">#4418</span>
+          </div>
+          <div class="audit-row">
+            <span class="audit-time">13:50</span>
+            <span class="audit-user">M. Ferretti</span>
+            <span class="audit-desc">Risposta inviata da info@gpcourier.com</span>
+            <span class="audit-tid">#4412</span>
+          </div>
+          <div class="audit-row">
+            <span class="audit-time">13:20</span>
+            <span class="audit-user">A. Conti</span>
+            <span class="audit-desc">Ticket segnato come URGENTE — Alfa Logistics</span>
+            <span class="audit-tid">#4409</span>
+          </div>
+          <div class="audit-row">
+            <span class="audit-time">12:44</span>
+            <span class="audit-user">L. Rossi</span>
+            <span class="audit-desc">Categoria cambiata: Altro → Spedizioni</span>
+            <span class="audit-tid">#4398</span>
+          </div>
+          <div class="audit-row">
+            <span class="audit-time">11:30</span>
+            <span class="audit-user">A. Conti</span>
+            <span class="audit-desc">Risposta inviata da info@gpcourier.com</span>
+            <span class="audit-tid">#4391</span>
+          </div>
+          <div class="audit-row">
+            <span class="audit-time">10:15</span>
+            <span class="audit-user">M. Ferretti</span>
+            <span class="audit-desc">Ticket spostato in "In corso" — Ferrero Import Sas</span>
+            <span class="audit-tid">#4380</span>
+          </div>
+          <div class="audit-row">
+            <span class="audit-time">09:55</span>
+            <span class="audit-user">L. Rossi</span>
+            <span class="audit-desc">Bozza AI rigenerata includendo storico cliente</span>
+            <span class="audit-tid">#4377</span>
+          </div>
+          <div class="audit-row">
+            <span class="audit-time">09:12</span>
+            <span class="audit-user sys">Sistema</span>
+            <span class="audit-desc">8 nuove email importate · classificazione AI completata in 1.2s</span>
+            <span class="audit-tid">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DATABASE -->
+      <div class="page" id="page-database">
+        <div class="page-title">Database</div>
+        <div class="page-sub">Archivio storico ticket chiusi · ricerca per categoria</div>
+        <div style="background:var(--bg-primary);border:0.5px solid var(--border-light);border-radius:var(--radius-lg);padding:20px;max-width:500px;">
+          <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Cerca nei ticket chiusi</div>
+          <input type="text" class="form-input" placeholder="Cerca per mittente, oggetto o data..." style="margin-bottom:12px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="filter-btn active">Tutti</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Spedizioni</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Reclami</button>
+            <button class="filter-btn" onclick="toggleFilter(this)">Fatturazione</button>
+          </div>
+          <div style="margin-top:16px;font-size:12px;color:var(--text-tertiary);text-align:center;padding:20px;">
+            La ricerca full-text sul contenuto dei ticket è pianificata per la Fase 2.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN PAGE -->
+<div class="login-page" id="login-page">
+  <div class="login-card">
+    <div class="login-logo">staff<span style="color:var(--blue)">io</span></div>
+    <div class="login-tagline">Gestione email per GP Courier</div>
+    <div class="form-group">
+      <label class="form-label">Email aziendale</label>
+      <input type="email" class="form-input" value="marco.ferretti@gpcourier.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input type="password" class="form-input" value="••••••••">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Accedi</button>
+    <div class="login-divider"><span>oppure</span></div>
+    <button class="google-btn" onclick="doLogin()">
+      <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Accedi con Google Workspace
+    </button>
+    <div style="margin-top:20px;font-size:11px;color:var(--text-tertiary);text-align:center;">Staffio · Demo GP Courier · v1.0</div>
+  </div>
+</div>
+
+<script>
+  const CATEGORIA_LABELS = {
+    spedizioni: 'Spedizioni', ritiri: 'Ritiri', giacenze: 'Giacenze',
+    reclami: 'Reclami', fatturazione: 'Fatturazione', preventivi: 'Preventivi',
+    doganale: 'Doc. doganale', dipendenti: 'Richieste dip.', altro: 'Altro'
+  };
+  const CATEGORIA_EMOJI_MAP = {
+    '🚚': 'spedizioni', '📦': 'ritiri', '🏭': 'giacenze',
+    '⚠️': 'reclami', '💶': 'fatturazione', '📋': 'preventivi',
+    '📄': 'doganale', '👤': 'dipendenti', '📁': 'altro'
+  };
+
+  function setSidebarKanban(categoria) {
+    if (!categoria) return;
+    const sb = document.querySelector('.sidebar-item[data-page="kanban"]');
+    if (!sb) return;
+    const label = CATEGORIA_LABELS[categoria] || categoria;
+    sb.innerHTML = '<span class="sidebar-icon">⋮⋮</span> ' + label;
+  }
+
+  function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('collapsed');
+  }
+
+  function showPage(id, el) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+    const page = document.getElementById('page-' + id);
+    if (page) page.classList.add('active');
+    if (el) { el.classList.add('active'); }
+    else {
+      document.querySelectorAll('.sidebar-item').forEach(s => {
+        if (s.dataset.page === id) s.classList.add('active');
+      });
+    }
+    // sidebar kanban label persists — updated only via navToKanban
+  }
+
+  function navToKanban(categoria) {
+    if (!categoria) categoria = 'spedizioni';
+    showPage('kanban-' + categoria);
+    document.querySelectorAll('.sidebar-item').forEach(s => {
+      s.classList.remove('active');
+      if (s.dataset.page === 'kanban') s.classList.add('active');
+    });
+    setSidebarKanban(categoria);
+  }
+
+  function _escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function _setText(id, txt) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  }
+
+  function navToTicket(categoria) {
+    let card = null;
+    if (typeof event !== 'undefined' && event) {
+      const t = event.currentTarget || event.target;
+      if (t && t.closest) card = t.closest('.ticket-card');
+    }
+
+    let sender = 'Cliente';
+    let subject = 'Richiesta cliente';
+    let timeTxt = 'oggi';
+    let timeShort = 'oggi';
+    let slaTxt = 'In corso';
+    let slaKind = 'ok';
+    let isUrgent = false;
+    let isDone = false;
+    let stato = 'Nuovo';
+
+    if (card) {
+      const senderEl = card.querySelector('.ticket-sender');
+      const subjEl = card.querySelector('.ticket-subject');
+      const timeEl = card.querySelector('.ticket-time');
+      const slaEl = card.querySelector('.ticket-sla');
+      if (senderEl) sender = senderEl.textContent.trim();
+      if (subjEl) subject = subjEl.textContent.trim();
+      if (timeEl) {
+        timeTxt = timeEl.textContent.trim();
+        timeShort = timeTxt.split(' · ')[0];
+        if (!categoria) {
+          for (const emoji in CATEGORIA_EMOJI_MAP) {
+            if (timeTxt.indexOf(emoji) !== -1) { categoria = CATEGORIA_EMOJI_MAP[emoji]; break; }
+          }
+        }
+      }
+      if (slaEl) {
+        slaTxt = slaEl.textContent.trim();
+        if (slaEl.classList.contains('over')) slaKind = 'over';
+        else if (slaEl.classList.contains('warn')) slaKind = 'warn';
+        else slaKind = 'ok';
+      }
+      isUrgent = card.classList.contains('urgent') || !!card.querySelector('.ticket-urgent-tag');
+      isDone = card.classList.contains('done');
+
+      const col = card.closest('.kanban-col');
+      if (col) {
+        const colTitle = col.querySelector('.col-title');
+        if (colTitle) stato = colTitle.textContent.trim();
+      } else if (isDone) {
+        stato = 'Completato';
+      }
+    }
+
+    if (!categoria) {
+      const currentPage = document.querySelector('.page.active');
+      if (currentPage && currentPage.id.indexOf('page-kanban-') === 0) {
+        const key = currentPage.id.replace('page-kanban-', '');
+        if (CATEGORIA_LABELS[key]) categoria = key;
+      }
+    }
+    if (!categoria) categoria = 'spedizioni';
+
+    const categoriaLabel = CATEGORIA_LABELS[categoria] || 'Altro';
+
+    let hash = 0;
+    const hashSrc = sender + '|' + subject;
+    for (let i = 0; i < hashSrc.length; i++) hash = ((hash * 31) + hashSrc.charCodeAt(i)) >>> 0;
+    const ticketId = 4000 + (hash % 900);
+    const slug = sender.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 20) || 'cliente';
+    const senderEmail = 'info@' + slug + '.it';
+
+    _setText('td-sender-title', sender);
+    _setText('td-subject-title', subject);
+
+    const tagsEl = document.getElementById('td-tags');
+    if (tagsEl) {
+      let html = '';
+      if (isUrgent) html += '<span class="detail-tag urgente">● URGENTE</span>';
+      html += '<span class="detail-tag sla">' + _escapeHtml(slaTxt) + '</span>';
+      tagsEl.innerHTML = html;
+    }
+
+    _setText('td-from', sender);
+    _setText('td-email', senderEmail + ' · ' + timeShort + ' · Ticket #' + ticketId);
+
+    _setText('td-categoria', categoriaLabel);
+
+    const statoEl = document.getElementById('td-stato');
+    if (statoEl) {
+      statoEl.textContent = stato;
+      const statoLower = stato.toLowerCase();
+      let statoClass = 'info-val';
+      if (statoLower.indexOf('nuovo') !== -1) statoClass += ' red';
+      else if (statoLower.indexOf('corso') !== -1) statoClass += ' amber';
+      else if (statoLower.indexOf('complet') !== -1 || statoLower.indexOf('chius') !== -1) statoClass += ' green';
+      statoEl.className = statoClass;
+    }
+
+    const slaSideEl = document.getElementById('td-sla-val');
+    if (slaSideEl) {
+      slaSideEl.textContent = slaTxt;
+      let slaClass = 'info-val';
+      if (slaKind === 'over') slaClass += ' red';
+      else if (slaKind === 'warn') slaClass += ' amber';
+      else slaClass += ' green';
+      slaSideEl.className = slaClass;
+    }
+
+    _setText('td-other-title', 'Altri ticket di ' + sender);
+
+    const chat = document.getElementById('td-chat');
+    if (chat) {
+      chat.innerHTML =
+        '<div class="chat-msg in">' +
+          '<div class="chat-meta">' + _escapeHtml(sender) + ' · ' + _escapeHtml(timeShort) + '</div>' +
+          '<div class="chat-bubble">' + _escapeHtml(subject) + '.</div>' +
+        '</div>';
+    }
+
+    const replyEl = document.getElementById('replyText');
+    if (replyEl) {
+      replyEl.value =
+        'Gentile team ' + sender + ',\n\n' +
+        'abbiamo ricevuto la vostra richiesta relativa a "' + subject + '" e stiamo verificando la situazione. ' +
+        'Vi forniremo un aggiornamento preciso al più presto.\n\n' +
+        'Restiamo a disposizione per qualsiasi ulteriore chiarimento.\n\n' +
+        'Cordiali saluti,\nTeam GP Courier\ninfo@gpcourier.com';
+    }
+
+    setSidebarKanban(categoria);
+
+    const backBtn = document.querySelector('#page-ticket .back-btn');
+    if (backBtn) {
+      backBtn.setAttribute('onclick', "showPage('kanban-" + categoria + "')");
+      backBtn.textContent = '← ' + categoriaLabel;
+    }
+
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const page = document.getElementById('page-ticket');
+    if (page) page.classList.add('active');
+    document.querySelectorAll('.sidebar-item').forEach(s => {
+      s.classList.remove('active');
+      if (s.dataset.page === 'ticket') s.classList.add('active');
+    });
+  }
+
+  function moveSpam(selectEl) {
+    const categoria = selectEl.value;
+    if (!categoria) return;
+    const labels = {
+      spedizioni: '🚚 Spedizioni', ritiri: '📦 Ritiri', giacenze: '🏭 Giacenze',
+      reclami: '⚠️ Reclami', fatturazione: '💶 Fatturazione', preventivi: '📋 Preventivi',
+      doganale: '📄 Doc. doganale', dipendenti: '👤 Richieste dip.', altro: '📁 Altro'
+    };
+    const card = selectEl.closest('.ticket-card');
+    if (card) {
+      card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      card.style.opacity = '0';
+      card.style.transform = 'translateX(24px)';
+      setTimeout(() => card.remove(), 300);
+    }
+    const countEl = document.querySelector('#page-kanban-spam .col-count');
+    if (countEl) {
+      const n = parseInt(countEl.textContent, 10);
+      if (!isNaN(n) && n > 0) countEl.textContent = String(n - 1);
+    }
+    showToast('Email spostata in ' + labels[categoria]);
+  }
+
+  function toggleFilter(btn) {
+    btn.closest('.filter-pills, div') && btn.closest('.filter-pills') ?
+      (btn.closest('.filter-pills').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')), btn.classList.add('active')) :
+      btn.classList.toggle('active');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  function sendReply() {
+    showToast('✓ Risposta inviata da info@gpcourier.com');
+  }
+
+  function doLogin() {
+    document.getElementById('login-page').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    showToast('Benvenuto, Marco Ferretti');
+  }
+
+  function showLogin() {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-page').style.display = 'flex';
+  }
+</script>
+</body>
+</html>
