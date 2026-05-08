@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getAiResponsesByMessageId, createAiResponse } from '@/lib/db/ai-responses'
-import { getMessageById, markAsReplied } from '@/lib/db/messages'
+import { getMessageById, markAsReplied, updateMessage } from '@/lib/db/messages'
 import { createServiceClient } from '@/lib/supabase/service'
 import { sendReply } from '@/lib/email/send'
 import type { AiResponse } from '@/types/database'
@@ -56,7 +56,7 @@ export async function approveAndSendAction(
       review_status: 'sent',
     })
 
-    await markAsReplied(rootMessageId)
+    await updateMessage(rootMessageId, { status: 'in_progress' })
     revalidatePath('/')
 
     return { ok: true, data: aiResponse }

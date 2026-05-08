@@ -450,7 +450,7 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
       if (mode === 'approve') {
         await approveAndSendAction(message.id, activeMessage.id, message.company_id, draft)
         setDraft('')
-        onStatusChange(message.id, 'replied')
+        onStatusChange(message.id, 'in_progress')
         const all = await getResponseHistoryAction(activeMessage.id)
         setThreadResponses((prev) => {
           const next = new Map(prev)
