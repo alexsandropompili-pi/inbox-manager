@@ -22,11 +22,9 @@ export async function approveAndSendAction(
   content: string,
 ): Promise<ApproveResult> {
   try {
-    // Load the message to reply to
     const replyToMessage = await getMessageById(replyToMessageId)
     if (!replyToMessage) return { ok: false, error: 'Messaggio non trovato' }
 
-    // Resolve the "From" address: env var > email_account lookup > error
     const db = createServiceClient()
     let fromEmail = process.env.POSTMARK_REPLY_FROM ?? null
 
@@ -69,10 +67,10 @@ export async function approveAndSendAction(
     } else if (err !== null && typeof err === 'object') {
       const e = err as Record<string, unknown>
       const parts = [
-        e.message ? `message: ${e.message}` : null,
-        e.code    ? `code: ${e.code}`       : null,
-        e.details ? `details: ${e.details}` : null,
-        e.hint    ? `hint: ${e.hint}`       : null,
+        e.message ? 'message: ' + String(e.message) : null,
+        e.code    ? 'code: '    + String(e.code)    : null,
+        e.details ? 'details: ' + String(e.details) : null,
+        e.hint    ? 'hint: '    + String(e.hint)    : null,
       ].filter(Boolean)
       message = parts.length ? parts.join(' | ') : 'Errore non serializzabile'
     } else {

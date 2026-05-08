@@ -725,4 +725,48 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
                       </svg>
                     ) : (
                       <svg className="h-4 w-4 translate-x-0.5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M3.478 2.405a.75.75 0 00-.926.
+                        <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Storico overlay ──────────────────────────────────────────────── */}
+        {showStorico && (
+          <StoricoOverlay
+            tickets={clientHistory}
+            loading={historyLoading}
+            clientName={displayName}
+            onClose={() => setShowStorico(false)}
+          />
+        )}
+      </aside>
+
+      {/* Confirm dialogs */}
+      {confirmMode === 'approve' && (
+        <ConfirmDialog
+          title="Approva e invia la risposta?"
+          description="La risposta verrà inviata al mittente e il ticket spostato in 'Concluso'. Assicurati di aver revisionato il testo prima di procedere."
+          confirmLabel="Approva e invia"
+          cancelLabel="Torna alla revisione"
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirmMode(null)}
+        />
+      )}
+      {confirmMode === 'reject' && (
+        <ConfirmDialog
+          title="Rifiutare la risposta generata?"
+          description="La bozza verrà salvata come rifiutata nello storico. Potrai generarne una nuova."
+          confirmLabel="Rifiuta"
+          cancelLabel="Annulla"
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirmMode(null)}
+        />
+      )}
+    </>
+  )
+}
