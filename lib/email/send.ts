@@ -5,17 +5,19 @@
  * The token is the "Server API token" found in Postmark → Servers → <your server> → API Tokens.
  */
 
+export interface OutboundAttachment {
+  name: string
+  content: string      // base64
+  contentType: string
+}
+
 interface SendReplyParams {
-  /** Sending address — must be a verified Postmark sender signature */
   from: string
-  /** Recipient (the original message sender) */
   to: string
-  /** Subject — "Re: " prefix is added automatically if not already present */
   subject: string
-  /** Plain-text body of the reply */
   body: string
-  /** Original Postmark MessageID — used for email threading via In-Reply-To */
   inReplyTo?: string
+  attachments?: OutboundAttachment[]
 }
 
 export async function sendReply(params: SendReplyParams): Promise<void> {
@@ -37,6 +39,14 @@ export async function sendReply(params: SendReplyParams): Promise<void> {
 
   if (params.inReplyTo) {
     payload.Headers = [{ Name: 'In-Reply-To', Value: params.inReplyTo }]
+  }
+
+  if (params.attachments && params.attachments.length > 0) {
+    payload.Attachments = params.attachments.map((a) => ({
+      Name: a.name,
+      Content: a.content,
+      ContentType: a.contentType,
+    }))
   }
 
   const res = await fetch('https://api.postmarkapp.com/email', {

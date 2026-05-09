@@ -5,7 +5,8 @@ import { getAiResponsesByMessageId, createAiResponse } from '@/lib/db/ai-respons
 import { getMessageById, markAsReplied, updateMessage } from '@/lib/db/messages'
 import { createServiceClient } from '@/lib/supabase/service'
 import { sendReply } from '@/lib/email/send'
-import type { AiResponse } from '@/types/database'
+import type { OutboundAttachment } from '@/lib/email/send'
+import type { AiResponse, MessageAttachment } from '@/types/database'
 
 export async function getResponseHistoryAction(messageId: string): Promise<AiResponse[]> {
   return getAiResponsesByMessageId(messageId)
@@ -20,6 +21,7 @@ export async function approveAndSendAction(
   replyToMessageId: string,
   companyId: string,
   content: string,
+  rawAttachments?: OutboundAttachment[],
 ): Promise<ApproveResult> {
   try {
     const replyToMessage = await getMessageById(replyToMessageId)
@@ -41,12 +43,38 @@ export async function approveAndSendAction(
       return { ok: false, error: 'Indirizzo mittente non configurato (imposta POSTMARK_REPLY_FROM)' }
     }
 
+    // ── Upload outbound attachments to Storage ─────────────────────────────
+    const storedAttachments: MessageAttachment[] = []
+    for (const att of rawAttachments ?? []) {
+      try {
+        const buffer = Buffer.from(att.content, 'base64')
+        const safeName = att.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+        const storagePath = `${companyId}/${replyToMessageId}/sent/${Date.now()}-${safeName}`
+        const { error } = await db.storage
+          .from('attachments')
+          .upload(storagePath, buffer, { contentType: att.contentType, upsert: false })
+        if (!error) {
+          const { data: { publicUrl } } = db.storage.from('attachments').getPublicUrl(storagePath)
+          storedAttachments.push({
+            name: att.name,
+            content_type: att.contentType,
+            size: buffer.length,
+            storage_path: storagePath,
+            public_url: publicUrl,
+          })
+        }
+      } catch (err) {
+        console.error('[approveAndSendAction] attachment upload failed:', err)
+      }
+    }
+
     await sendReply({
       from: fromEmail,
       to: replyToMessage.from_email,
       subject: replyToMessage.subject,
       body: content,
       inReplyTo: replyToMessage.external_message_id,
+      attachments: rawAttachments,
     })
 
     const aiResponse = await createAiResponse({
@@ -54,6 +82,7 @@ export async function approveAndSendAction(
       generated_text: content,
       final_text: content,
       review_status: 'sent',
+      attachments: storedAttachments.length > 0 ? storedAttachments : null,
     })
 
     await updateMessage(rootMessageId, { status: 'in_progress' })

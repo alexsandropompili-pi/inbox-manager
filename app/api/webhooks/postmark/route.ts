@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { tokenizeMessage } from '@/lib/logistics/tokenize'
+import type { MessageAttachment } from '@/types/database'
 
 // ─── Postmark inbound payload types ──────────────────────────────────────────
 
@@ -26,6 +27,14 @@ interface PostmarkAddress {
 interface PostmarkHeader {
   Name: string
   Value: string
+}
+
+interface PostmarkAttachment {
+  Name: string
+  Content: string       // base64-encoded file content
+  ContentType: string
+  ContentLength: number
+  ContentID?: string    // set for inline images
 }
 
 interface PostmarkInboundPayload {
@@ -41,6 +50,7 @@ interface PostmarkInboundPayload {
   HtmlBody: string
   ReplyTo?: string
   Headers?: PostmarkHeader[]
+  Attachments?: PostmarkAttachment[]
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -193,6 +203,36 @@ export async function POST(req: NextRequest) {
   if (insertError || !inserted) {
     console.error('[postmark-webhook] insert failed:', insertError?.message)
     return NextResponse.json({ error: insertError?.message ?? 'Insert failed' }, { status: 500 })
+  }
+
+  // ── Upload inbound attachments to Supabase Storage ────────────────────────
+  if (payload.Attachments && payload.Attachments.length > 0) {
+    const stored: MessageAttachment[] = []
+    for (const att of payload.Attachments) {
+      try {
+        const buffer = Buffer.from(att.Content, 'base64')
+        const safeName = (att.Name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_')
+        const storagePath = `${emailAccount.company_id}/${inserted.id}/${Date.now()}-${safeName}`
+        const { error } = await db.storage
+          .from('attachments')
+          .upload(storagePath, buffer, { contentType: att.ContentType, upsert: false })
+        if (!error) {
+          const { data: { publicUrl } } = db.storage.from('attachments').getPublicUrl(storagePath)
+          stored.push({
+            name: att.Name || safeName,
+            content_type: att.ContentType,
+            size: att.ContentLength ?? buffer.length,
+            storage_path: storagePath,
+            public_url: publicUrl,
+          })
+        }
+      } catch (err) {
+        console.error('[postmark-webhook] attachment upload failed:', err)
+      }
+    }
+    if (stored.length > 0) {
+      await db.from('messages').update({ attachments: stored }).eq('id', inserted.id)
+    }
   }
 
   // ── Tokenize (fire-and-forget style, failure is non-fatal) ────────────────

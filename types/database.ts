@@ -27,6 +27,14 @@ export type MessageSettore = 'Traffico' | 'Magazzino' | 'Amministrazione'
 export type GradoUrgenza = 'bassa' | 'media' | 'alta' | 'critica'
 export type TipoDocumento = 'CMR' | 'DDT' | 'Fattura' | 'Bolla' | 'Ordine'
 
+export interface MessageAttachment {
+  name: string
+  content_type: string
+  size: number
+  storage_path: string
+  public_url: string
+}
+
 export interface DatiEstratti {
   /** Numero/codice spedizione alfanumerico (es. "SPD-001", "12345ABC"). null se assente. */
   numero_spedizione: string | null
@@ -61,6 +69,7 @@ export interface Message {
   notion_3: string | null
   settore: MessageSettore | null
   dati_estratti: DatiEstratti | null
+  attachments: MessageAttachment[] | null
   received_at: string
   replied_at: string | null
   created_at: string
@@ -93,6 +102,7 @@ export interface AiResponse {
   generated_text: string
   final_text: string | null
   review_status: AiResponseStatus
+  attachments: MessageAttachment[] | null
   created_at: string
 }
 
@@ -106,7 +116,7 @@ export type EmailAccountInsert = Omit<EmailAccount, 'id' | 'created_at'> & {
   id?: string
 }
 
-export type MessageInsert = Omit<Message, 'id' | 'created_at' | 'replied_at' | 'priority' | 'channel' | 'token_code' | 'notion_1' | 'notion_2' | 'notion_3' | 'settore' | 'dati_estratti'> & {
+export type MessageInsert = Omit<Message, 'id' | 'created_at' | 'replied_at' | 'priority' | 'channel' | 'token_code' | 'notion_1' | 'notion_2' | 'notion_3' | 'settore' | 'dati_estratti' | 'attachments'> & {
   id?: string
   replied_at?: string | null
   priority?: MessagePriority | null
@@ -117,11 +127,13 @@ export type MessageInsert = Omit<Message, 'id' | 'created_at' | 'replied_at' | '
   notion_3?: string | null
   settore?: MessageSettore | null
   dati_estratti?: DatiEstratti | null
+  attachments?: MessageAttachment[] | null
 }
 
-export type AiResponseInsert = Omit<AiResponse, 'id' | 'created_at'> & {
+export type AiResponseInsert = Omit<AiResponse, 'id' | 'created_at' | 'attachments'> & {
   id?: string
   created_at?: string
+  attachments?: MessageAttachment[] | null
 }
 
 // ─── Update types (all fields optional except id) ─────────────────────────────

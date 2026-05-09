@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useTransition, useMemo, useCallback } from 'react'
-import type { Message, KanbanStatus, AiResponse, Spedizione } from '@/types/database'
+import type { Message, KanbanStatus, AiResponse, Spedizione, MessageAttachment } from '@/types/database'
+import type { OutboundAttachment } from '@/lib/email/send'
 import { ConfirmDialog } from './ConfirmDialog'
 import {
   getResponseHistoryAction,
@@ -24,6 +25,12 @@ function formatShort(iso: string) {
   return new Intl.DateTimeFormat('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 function isSameDay(a: string, b: string) {
   return new Date(a).toDateString() === new Date(b).toDateString()
 }
@@ -31,6 +38,16 @@ function isSameDay(a: string, b: string) {
 function getInitials(name: string | null, email: string) {
   const src = name ?? email
   return src.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('')
+}
+
+// ─── Pending attachment (outbound, before send) ───────────────────────────────
+
+interface PendingAttachment {
+  name: string
+  type: string
+  size: number
+  base64: string
+  previewUrl: string
 }
 
 // ─── Streaming helper ─────────────────────────────────────────────────────────
@@ -57,6 +74,95 @@ async function streamAiResponse(
     accumulated += decoder.decode(value, { stream: true })
     onChunk(accumulated)
   }
+}
+
+// ─── Attachment components ────────────────────────────────────────────────────
+
+function FileIcon({ contentType, className = 'h-5 w-5' }: { contentType: string; className?: string }) {
+  if (contentType.includes('pdf')) {
+    return (
+      <svg className={`${className} text-red-500`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+      </svg>
+    )
+  }
+  if (contentType.includes('word') || contentType.includes('document') || contentType.includes('msword')) {
+    return (
+      <svg className={`${className} text-blue-500`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+      </svg>
+    )
+  }
+  if (contentType.includes('excel') || contentType.includes('spreadsheet') || contentType.includes('csv')) {
+    return (
+      <svg className={`${className} text-emerald-500`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75.125V5.625a1.125 1.125 0 011.125-1.125h17.25c.621 0 1.125.504 1.125 1.125v12.75m-18.375 1.5h16.875M6 18.375V5.625m0 12.75h12M6 18.375c0 .621.504 1.125 1.125 1.125H18" />
+      </svg>
+    )
+  }
+  return (
+    <svg className={`${className} text-zinc-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+    </svg>
+  )
+}
+
+function AttachmentItem({ att }: { att: MessageAttachment }) {
+  const isImage = att.content_type.startsWith('image/')
+
+  if (isImage) {
+    return (
+      <a
+        href={att.public_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block overflow-hidden rounded-xl border border-zinc-200 shadow-sm hover:shadow-md transition-shadow"
+        title={att.name}
+      >
+        <img
+          src={att.public_url}
+          alt={att.name}
+          className="max-h-52 max-w-[260px] object-cover hover:opacity-90 transition-opacity"
+        />
+        <div className="flex items-center justify-between gap-2 border-t border-zinc-100 bg-zinc-50 px-2.5 py-1.5">
+          <span className="truncate text-[10px] text-zinc-500 max-w-[180px]">{att.name}</span>
+          <svg className="h-3 w-3 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+        </div>
+      </a>
+    )
+  }
+
+  return (
+    <a
+      href={att.public_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      download={att.name}
+      className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 hover:border-zinc-300 hover:bg-white transition-all shadow-sm"
+    >
+      <FileIcon contentType={att.content_type} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-medium text-zinc-700">{att.name}</p>
+        <p className="text-[10px] text-zinc-400">{formatFileSize(att.size)}</p>
+      </div>
+      <svg className="h-3.5 w-3.5 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+      </svg>
+    </a>
+  )
+}
+
+function AttachmentList({ attachments }: { attachments: MessageAttachment[] | null | undefined }) {
+  if (!attachments || attachments.length === 0) return null
+  return (
+    <div className="mt-2.5 flex flex-wrap gap-2">
+      {attachments.map((att, i) => (
+        <AttachmentItem key={i} att={att} />
+      ))}
+    </div>
+  )
 }
 
 // ─── Spedizione card (compact) ────────────────────────────────────────────────
@@ -112,6 +218,7 @@ function ClientBubble({ message, showName }: { message: Message; showName: boole
       <div className="group flex flex-col gap-1">
         <div className="rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 shadow-sm ring-1 ring-zinc-100">
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800">{message.body}</p>
+          <AttachmentList attachments={message.attachments} />
         </div>
         <span className="ml-1 text-[10px] text-zinc-400" suppressHydrationWarning>
           {formatTime(message.received_at)}
@@ -127,6 +234,26 @@ function OperatorBubble({ response }: { response: AiResponse }) {
       <div className="flex flex-col items-end gap-1">
         <div className="rounded-2xl rounded-tr-sm bg-indigo-600 px-4 py-2.5 shadow-sm">
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-white">{response.final_text ?? response.generated_text}</p>
+          {response.attachments && response.attachments.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {response.attachments.map((att, i) => (
+                <a
+                  key={i}
+                  href={att.public_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={att.name}
+                  className="flex items-center gap-2 rounded-lg bg-indigo-500/60 px-2.5 py-1.5 hover:bg-indigo-500/80 transition-colors"
+                >
+                  <FileIcon contentType={att.content_type} className="h-3.5 w-3.5 text-indigo-100" />
+                  <span className="truncate text-[11px] font-medium text-indigo-100 max-w-[160px]">{att.name}</span>
+                  <svg className="h-3 w-3 shrink-0 text-indigo-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-1 mr-1">
           <span className="text-[10px] text-zinc-400" suppressHydrationWarning>
@@ -202,12 +329,10 @@ function StoricoOverlay({
 
   return (
     <div className="absolute inset-0 z-20 flex flex-col bg-white">
-      {/* Header */}
       <div className="flex items-center gap-3 border-b border-zinc-200 px-4 py-3.5">
         <button
           onClick={onClose}
           className="flex items-center justify-center rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
-          aria-label="Chiudi storico"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -224,7 +349,6 @@ function StoricoOverlay({
         )}
       </div>
 
-      {/* List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {loading && (
           <>
@@ -250,14 +374,9 @@ function StoricoOverlay({
         )}
 
         {!loading && tickets.map((t) => (
-          <div
-            key={t.id}
-            className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-colors hover:border-zinc-200 hover:bg-white"
-          >
+          <div key={t.id} className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-colors hover:border-zinc-200 hover:bg-white">
             <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="text-[10px] text-zinc-400" suppressHydrationWarning>
-                {formatShort(t.received_at)}
-              </span>
+              <span className="text-[10px] text-zinc-400" suppressHydrationWarning>{formatShort(t.received_at)}</span>
               <span className={['inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset', STATUS_COLOR[t.status] ?? 'bg-zinc-100 text-zinc-500 ring-zinc-200'].join(' ')}>
                 {STATUS_LABEL[t.status] ?? t.status}
               </span>
@@ -292,19 +411,21 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
   const [confirmMode, setConfirmMode] = useState<'approve' | 'reject' | null>(null)
   const [sendError, setSendError]     = useState<string | null>(null)
 
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const [spedizione, setSpedizione]             = useState<Spedizione | null | undefined>(undefined)
   const [spedizioneNumero, setSpedizioneNumero] = useState<string | null>(null)
 
-  const [showStorico, setShowStorico]   = useState(false)
+  const [showStorico, setShowStorico]     = useState(false)
   const [clientHistory, setClientHistory] = useState<Message[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
 
-  const [, startTransition]  = useTransition() // eslint-disable-line @typescript-eslint/no-unused-vars
-  const abortRef             = useRef<AbortController | null>(null)
-  const chatEndRef           = useRef<HTMLDivElement>(null)
-  const autoGeneratedForId   = useRef<string | null>(null)
+  const [, startTransition] = useTransition() // eslint-disable-line @typescript-eslint/no-unused-vars
+  const abortRef           = useRef<AbortController | null>(null)
+  const chatEndRef         = useRef<HTMLDivElement>(null)
+  const autoGeneratedForId = useRef<string | null>(null)
 
-  // Last message in thread — the one we reply to
   const activeMessage = useMemo(
     () => threadMessages[threadMessages.length - 1],
     [threadMessages],
@@ -319,7 +440,7 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
       .finally(() => setThreadLoading(false))
   }, [message.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Load sent AI responses for each thread message ──────────────────────────
+  // ── Load sent AI responses ───────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       const map = new Map<string, AiResponse[]>()
@@ -334,7 +455,7 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
     load().catch(console.error)
   }, [threadMessages])
 
-  // ── Load spedizione for active (last) message ───────────────────────────────
+  // ── Load spedizione ──────────────────────────────────────────────────────────
   useEffect(() => {
     setSpedizione(undefined)
     setSpedizioneNumero(null)
@@ -353,7 +474,7 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
       .catch(() => setSpedizione(null))
   }, [activeMessage.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Auto-generate AI response once spedizione is resolved ───────────────────
+  // ── Auto-generate AI response ────────────────────────────────────────────────
   useEffect(() => {
     if (spedizione === undefined) return
     if (autoGeneratedForId.current === activeMessage.id) return
@@ -373,12 +494,19 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
   // ── Cleanup ─────────────────────────────────────────────────────────────────
   useEffect(() => () => { abortRef.current?.abort() }, [])
 
-  // ── Scroll to bottom when chat updates ──────────────────────────────────────
+  // ── Revoke object URLs on unmount ────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      pendingAttachments.forEach((a) => { if (a.previewUrl) URL.revokeObjectURL(a.previewUrl) })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Scroll to bottom ────────────────────────────────────────────────────────
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [threadMessages, threadResponses, isStreaming])
 
-  // ── Build timeline ───────────────────────────────────────────────────────────
+  // ── Timeline ─────────────────────────────────────────────────────────────────
   type TimelineItem =
     | { type: 'day'; date: string; key: string }
     | { type: 'client'; message: Message; showName: boolean }
@@ -390,16 +518,11 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
 
     for (let i = 0; i < threadMessages.length; i++) {
       const msg = threadMessages[i]
-
-      // Day separator
       if (!prevDate || !isSameDay(prevDate, msg.received_at)) {
         items.push({ type: 'day', date: msg.received_at, key: `day-${msg.id}` })
         prevDate = msg.received_at
       }
-
       items.push({ type: 'client', message: msg, showName: i === 0 })
-
-      // Sent responses for this message
       const responses = threadResponses.get(msg.id) ?? []
       for (const r of responses) {
         if (!isSameDay(prevDate ?? r.created_at, r.created_at)) {
@@ -409,7 +532,6 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
         items.push({ type: 'operator', response: r })
       }
     }
-
     return items
   }, [threadMessages, threadResponses])
 
@@ -425,7 +547,34 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
     }
   }, [message.company_id, message.from_email, message.id, clientHistory.length])
 
-  // ── Actions ─────────────────────────────────────────────────────────────────
+  // ── File selection ───────────────────────────────────────────────────────────
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    for (const file of files) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = reader.result as string
+        const base64 = dataUrl.split(',')[1]
+        const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : ''
+        setPendingAttachments((prev) => [
+          ...prev,
+          { name: file.name, type: file.type || 'application/octet-stream', size: file.size, base64, previewUrl },
+        ])
+      }
+      reader.readAsDataURL(file)
+    }
+    e.target.value = ''
+  }
+
+  function removePendingAttachment(index: number) {
+    setPendingAttachments((prev) => {
+      const att = prev[index]
+      if (att.previewUrl) URL.revokeObjectURL(att.previewUrl)
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  // ── Actions ──────────────────────────────────────────────────────────────────
   function handleRegenerate() {
     if (isStreaming) { abortRef.current?.abort(); return }
     if (spedizione === undefined) return
@@ -448,16 +597,31 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
     setIsSending(true)
     try {
       if (mode === 'approve') {
-        await approveAndSendAction(message.id, activeMessage.id, message.company_id, draft)
+        const outboundAttachments: OutboundAttachment[] = pendingAttachments.map((a) => ({
+          name: a.name,
+          content: a.base64,
+          contentType: a.type,
+        }))
+
+        const result = await approveAndSendAction(
+          message.id,
+          activeMessage.id,
+          message.company_id,
+          draft,
+          outboundAttachments.length > 0 ? outboundAttachments : undefined,
+        )
+        if (!result.ok) throw new Error(result.error)
+
+        setPendingAttachments([])
         onStatusChange(message.id, 'in_progress')
-        // Load the just-sent response into the timeline
+
         const all = await getResponseHistoryAction(activeMessage.id)
         setThreadResponses((prev) => {
           const next = new Map(prev)
           next.set(activeMessage.id, all.filter((r) => r.review_status === 'sent').reverse())
           return next
         })
-        // Clear draft and auto-generate a new one for a potential follow-up
+
         setDraft('')
         autoGeneratedForId.current = null
         if (spedizione !== undefined) {
@@ -481,10 +645,10 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
   }
 
   // ── Derived ──────────────────────────────────────────────────────────────────
-  const displayName      = message.from_name ?? message.from_email
-  const initials         = getInitials(message.from_name, message.from_email)
-  const hasDraft         = draft.trim().length > 0
-  const spedizioneReady  = spedizione !== undefined
+  const displayName     = message.from_name ?? message.from_email
+  const initials        = getInitials(message.from_name, message.from_email)
+  const hasDraft        = draft.trim().length > 0
+  const spedizioneReady = spedizione !== undefined
 
   return (
     <>
@@ -499,22 +663,13 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="flex shrink-0 items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3">
-          {/* Avatar */}
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-bold text-white shadow-md shadow-indigo-200/50">
             {initials}
           </div>
-
-          {/* Name + email */}
           <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-semibold text-zinc-900" title={displayName}>
-              {displayName}
-            </p>
-            <p className="truncate text-xs text-zinc-400" title={message.from_email}>
-              {message.from_email}
-            </p>
+            <p className="truncate text-sm font-semibold text-zinc-900" title={displayName}>{displayName}</p>
+            <p className="truncate text-xs text-zinc-400" title={message.from_email}>{message.from_email}</p>
           </div>
-
-          {/* Storico button */}
           <button
             onClick={openStorico}
             className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-medium text-zinc-500 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
@@ -524,8 +679,6 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
             </svg>
             Storico
           </button>
-
-          {/* Subject + token */}
           <div className="hidden sm:flex flex-col items-end shrink-0">
             {message.token_code && (
               <span className="font-mono text-[10px] font-semibold tracking-widest text-indigo-400">
@@ -533,8 +686,6 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
               </span>
             )}
           </div>
-
-          {/* Close */}
           <button
             onClick={onClose}
             aria-label="Chiudi"
@@ -554,8 +705,6 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
         {/* ── Chat area ───────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto bg-[#f0f2f5] px-4 py-4">
           <div className="flex flex-col gap-2">
-
-            {/* Loading skeletons */}
             {threadLoading && (
               <>
                 <DaySeparator date={message.received_at} />
@@ -566,17 +715,9 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
                     <div className="h-2 w-8 rounded-full bg-zinc-200" />
                   </div>
                 </div>
-                <div className="animate-pulse flex items-end justify-end gap-2 pl-16">
-                  <div className="space-y-1.5 flex-1">
-                    <div className="h-16 rounded-2xl rounded-tr-sm bg-indigo-200" />
-                    <div className="flex justify-end"><div className="h-2 w-8 rounded-full bg-zinc-200" /></div>
-                  </div>
-                  <div className="h-7 w-7 rounded-full bg-indigo-300 shrink-0" />
-                </div>
               </>
             )}
 
-            {/* Timeline */}
             {!threadLoading && timeline.map((item) => {
               if (item.type === 'day') return <DaySeparator key={item.key} date={item.date} />
               if (item.type === 'client') return (
@@ -585,14 +726,12 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
               return <OperatorBubble key={item.response.id} response={item.response} />
             })}
 
-            {/* AI typing indicator while streaming */}
             {isStreaming && <TypingIndicator />}
-
             <div ref={chatEndRef} />
           </div>
         </div>
 
-        {/* ── Spedizione card (if found) ───────────────────────────────────── */}
+        {/* ── Spedizione card ──────────────────────────────────────────────── */}
         {spedizioneReady && spedizioneNumero && (
           <div className="shrink-0 border-t border-zinc-100 bg-white py-3">
             {spedizione ? (
@@ -611,7 +750,6 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
         {/* ── Bottom input area ────────────────────────────────────────────── */}
         <div className="shrink-0 border-t border-zinc-200 bg-white px-4 pb-4 pt-3">
           {!spedizioneReady ? (
-            /* Loading state */
             <div className="flex items-center justify-center gap-2 py-4 text-sm text-zinc-400">
               <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -631,10 +769,7 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
                     <p className="text-xs font-semibold text-red-700">Errore invio email</p>
                     <p className="mt-0.5 text-[11px] text-red-600 break-all">{sendError}</p>
                   </div>
-                  <button
-                    onClick={() => setSendError(null)}
-                    className="shrink-0 text-red-300 hover:text-red-500 transition-colors"
-                  >
+                  <button onClick={() => setSendError(null)} className="shrink-0 text-red-300 hover:text-red-500 transition-colors">
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -655,6 +790,34 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
                   {isStreaming ? 'Interrompi' : 'Rigenera'}
                 </button>
               </div>
+
+              {/* Pending attachments chips */}
+              {pendingAttachments.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {pendingAttachments.map((att, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50 py-1 pl-1.5 pr-2"
+                    >
+                      {att.previewUrl ? (
+                        <img src={att.previewUrl} alt={att.name} className="h-4 w-4 rounded-sm object-cover shrink-0" />
+                      ) : (
+                        <FileIcon contentType={att.type} className="h-3.5 w-3.5 shrink-0" />
+                      )}
+                      <span className="max-w-[120px] truncate text-xs font-medium text-indigo-700">{att.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removePendingAttachment(i)}
+                        className="shrink-0 text-indigo-300 hover:text-indigo-600 transition-colors"
+                      >
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Input row */}
               <div className="flex items-end gap-2">
@@ -687,6 +850,19 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
                     </button>
                   )}
 
+                  {/* Paperclip */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isStreaming || isSending}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-400 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-500 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Allega file"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+                    </svg>
+                  </button>
+
                   {/* Send */}
                   <button
                     onClick={handleApproveClick}
@@ -712,6 +888,15 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
                   </button>
                 </div>
               </div>
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+              />
             </>
           )}
         </div>
@@ -731,7 +916,7 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
       {confirmMode === 'approve' && (
         <ConfirmDialog
           title="Approva e invia la risposta?"
-          description="La risposta verrà inviata al mittente e il ticket spostato in 'Concluso'. Assicurati di aver revisionato il testo prima di procedere."
+          description="La risposta verrà inviata al mittente. Assicurati di aver revisionato il testo prima di procedere."
           confirmLabel="Approva e invia"
           cancelLabel="Torna alla revisione"
           onConfirm={handleConfirm}
