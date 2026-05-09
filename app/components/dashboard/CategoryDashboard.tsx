@@ -2,9 +2,11 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Message } from '@/types/database'
+
+const POLL_INTERVAL = 30_000 // 30 secondi
 
 export interface CategoryData {
   notion: string
@@ -103,13 +105,39 @@ function CategoryCard({
 export function CategoryDashboard({ categories, stats }: Props) {
   const router = useRouter()
   const [badges, setBadges] = useState<Record<string, number>>({})
+  // Baseline: arrived count per category at last check, to detect new messages
+  const baselineRef = useRef<Record<string, number> | null>(null)
 
-  // Load badges from localStorage on mount
+  // Load badges from localStorage on mount + set initial baseline
   useEffect(() => {
     setBadges(readBadges())
+    const baseline: Record<string, number> = {}
+    categories.forEach(cat => { baseline[cat.notion] = cat.arrived })
+    baselineRef.current = baseline
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Supabase Realtime: listen for new messages
+  // Detect new messages after each router.refresh() by comparing arrived counts
+  useEffect(() => {
+    if (baselineRef.current === null) return
+    let changed = false
+    const newBadges = { ...readBadges() }
+    categories.forEach(cat => {
+      const baseline = baselineRef.current![cat.notion] ?? 0
+      if (cat.arrived > baseline) {
+        const diff = cat.arrived - baseline
+        newBadges[cat.notion] = (newBadges[cat.notion] ?? 0) + diff
+        baselineRef.current![cat.notion] = cat.arrived
+        changed = true
+      }
+    })
+    if (changed) {
+      writeBadges(newBadges)
+      setBadges(newBadges)
+    }
+  }, [categories])
+
+  // Supabase Realtime: trigger refresh on new messages (best-effort)
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
@@ -119,17 +147,7 @@ export function CategoryDashboard({ categories, stats }: Props) {
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
           const msg = payload.new as Message
-          // Only count root messages (not thread replies)
           if (msg.thread_id !== null) return
-
-          const category = mapToFixedCategory(msg)
-
-          setBadges((prev) => {
-            const updated = { ...prev, [category]: (prev[category] ?? 0) + 1 }
-            writeBadges(updated)
-            return updated
-          })
-
           router.refresh()
         },
       )
@@ -138,6 +156,14 @@ export function CategoryDashboard({ categories, stats }: Props) {
     return () => {
       supabase.removeChannel(channel)
     }
+  }, [router])
+
+  // Polling fallback: aggiorna i dati ogni 30 secondi anche senza Realtime
+  useEffect(() => {
+    const interval = setInterval(() => {
+      router.refresh()
+    }, POLL_INTERVAL)
+    return () => clearInterval(interval)
   }, [router])
 
   const clearBadge = useCallback((category: string) => {
