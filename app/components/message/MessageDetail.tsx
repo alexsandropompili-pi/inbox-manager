@@ -752,35 +752,6 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
                 </div>
               )}
 
-              {/* Genera risposta IA — shown when draft is empty and not streaming */}
-              {!hasDraft && !isStreaming && (
-                <button
-                  onClick={handleRegenerate}
-                  className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/60 py-3 text-sm font-medium text-indigo-600 transition-all hover:border-indigo-400 hover:bg-indigo-50 active:scale-[0.99]"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                  </svg>
-                  Genera risposta IA
-                </button>
-              )}
-
-              {/* Rigenera link — shown only when draft exists */}
-              {(hasDraft || isStreaming) && (
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[11px] italic text-zinc-400">bozza generata da IA</span>
-                  <button
-                    onClick={handleRegenerate}
-                    className="flex items-center gap-1 text-[11px] text-zinc-400 transition-colors hover:text-zinc-600"
-                  >
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    {isStreaming ? 'Interrompi' : 'Rigenera'}
-                  </button>
-                </div>
-              )}
-
               {/* Pending attachments chips */}
               {pendingAttachments.length > 0 && (
                 <div className="mb-2 flex flex-wrap gap-1.5">
@@ -839,6 +810,27 @@ export function MessageDetail({ message, onClose, onStatusChange }: Props) {
                       </svg>
                     </button>
                   )}
+
+                  {/* IA circle — generate / regenerate / stop */}
+                  <button
+                    type="button"
+                    onClick={handleRegenerate}
+                    disabled={isSending}
+                    title={isStreaming ? 'Interrompi' : hasDraft ? 'Rigenera risposta IA' : 'Genera risposta IA'}
+                    className={[
+                      'flex h-9 w-9 items-center justify-center rounded-full border text-xs font-bold shadow-sm transition-all active:scale-95',
+                      isStreaming
+                        ? 'border-indigo-300 bg-indigo-100 text-indigo-500 hover:bg-indigo-200'
+                        : 'border-indigo-200 bg-indigo-50 text-indigo-600 hover:border-indigo-400 hover:bg-indigo-100',
+                      isSending ? 'opacity-40 cursor-not-allowed' : '',
+                    ].join(' ')}
+                  >
+                    {isStreaming ? (
+                      <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+                        <rect x="6" y="6" width="12" height="12" rx="1" />
+                      </svg>
+                    ) : 'IA'}
+                  </button>
 
                   {/* Paperclip */}
                   <button
