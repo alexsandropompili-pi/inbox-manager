@@ -1,10 +1,47 @@
 # Secretar.ia — Stato avanzamento lavori
 
-> Aggiornato al 07 maggio 2026
+> Aggiornato al 09 maggio 2026
 
 ---
 
 ## ✅ Completato
+
+### Sessione 09 maggio 2026
+
+#### Fix categorizzazione email
+- La funzione `mapToFixedCategory` in `app/page.tsx` ora usa **tre livelli** in cascata: codice categoria del token AI (`COM`→Ordini, `FAT`→Fatture), poi tutte e tre le nozioni + il soggetto dell'email, poi default Spedizioni.
+- Problema risolto: email con oggetto "ordini" finiva in Spedizioni perché si guardava solo `notion_1`.
+
+#### Auto-refresh e badge notifica per categoria
+- La `CategoryDashboard` si aggiorna automaticamente quando arriva un'email nuova tramite **Supabase Realtime** (INSERT sulla tabella `messages`) + **polling ogni 30 secondi** come fallback.
+- Quando arriva una nuova email appare un **pallino rosso** con contatore sul bottone della categoria corrispondente. Il badge persiste in `localStorage` e sparisce quando si clicca il bottone.
+- Solo le email root (non risposte ai thread) generano badge.
+
+#### UI Kanban — bordi card per colonna
+- Le card dei ticket hanno ora un bordo colorato che corrisponde alla colonna: **blu** (Arrivato), **arancione** (In svolgimento), **verde** (Concluso).
+- Rimosso il badge di urgenza (health dot) e tutta la logica di colore basata sull'SLA.
+
+#### UI Kanban — rimozione SLA e filtro canale
+- Rimossa la chip "ore di scadenza" (SlaChip) dai ticket.
+- Rimosso il filtro "Canale" (Tutti / WhatsApp) dalla barra di ricerca — rimangono solo Priorità e Data.
+
+#### Chat ticket — pannello resta aperto dopo invio
+- Dopo "Approva e invia" il pannello chat non si chiude più.
+- Il messaggio inviato appare come bubble nella chat (stile WhatsApp).
+- Il ticket viene spostato in "In svolgimento" senza chiudere la vista.
+
+#### Allegati email — supporto completo inbound e outbound
+- **In entrata**: il webhook Postmark (`/api/webhooks/postmark`) legge gli allegati base64, li carica su **Supabase Storage** (bucket `attachments`), salva i metadati in `messages.attachments` (colonna JSONB).
+- **In uscita**: bottone spilletta (📎) nell'area di composizione. I file selezionati appaiono come chip con anteprima per le immagini. Al momento dell'invio vengono allegati all'email via Postmark e salvati su Storage in `ai_responses.attachments`.
+- **Visualizzazione**: immagini mostrate come miniatura inline; altri file (PDF, Word, Excel…) come card con icona colorata + download. Allegati inviati visibili nella bubble della risposta.
+- **Prerequisiti DB**: `ALTER TABLE messages ADD COLUMN attachments JSONB DEFAULT '[]'` e `ALTER TABLE ai_responses ADD COLUMN attachments JSONB DEFAULT '[]'` — già eseguiti.
+- **Storage**: bucket `attachments` creato su Supabase (pubblico).
+
+#### Bottone "Genera risposta IA"
+- Rimossa la generazione automatica all'apertura del ticket.
+- Aggiunto cerchio **IA** (indigo) nella colonna dei bottoni sopra la spilletta. Cliccarlo genera la bozza AI; durante lo streaming mostra un quadrato stop; se c'è già una bozza funge da "Rigenera".
+
+---
 
 ### Modello AI generazione risposta
 - Il file `app/api/ai/generate-response/route.ts` usa già **Claude Sonnet 4.6** (non Opus)
