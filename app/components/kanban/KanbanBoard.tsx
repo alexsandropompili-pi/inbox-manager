@@ -162,7 +162,10 @@ export function KanbanBoard({
         [newStatus]: [{ ...msg, status: newStatus }, ...prev[newStatus]],
       }
     })
-    setSelectedMessage(null)
+    // Keep panel open — just sync the status so the card reflects the new column
+    setSelectedMessage((prev) =>
+      prev?.id === messageId ? { ...prev, status: newStatus } : prev,
+    )
   }
 
   return (
