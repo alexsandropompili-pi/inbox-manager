@@ -7,12 +7,19 @@ import { CategoryDashboard } from '@/app/components/dashboard/CategoryDashboard'
 import type { CategoryData } from '@/app/components/dashboard/CategoryDashboard'
 import type { Message } from '@/types/database'
 
-function mapToFixedCategory(notion1: string | null | undefined): string {
-  const n = (notion1 ?? '').toLowerCase()
-  if (n.includes('reclam') || n.includes('contestaz') || n.includes('lament')) return 'Reclami'
-  if (n.includes('fattur') || n.includes('pagament') || n.includes('rimborso')) return 'Fatture'
-  if (n.includes('dipendent') || n.includes('ferie') || n.includes('permess') || n.includes('stipend')) return 'Richieste dipendenti'
-  if (n.includes('ordin') || n.includes('acquist') || n.includes('forni')) return 'Ordini'
+function mapToFixedCategory(msg: Message): string {
+  // token_code format: YYYY-CAT-NNN — use the AI-assigned category code first
+  const catCode = msg.token_code?.split('-')[1] ?? ''
+  if (catCode === 'FAT') return 'Fatture'
+  if (catCode === 'COM') return 'Ordini'
+
+  // Scan all notions + subject for keyword signals
+  const text = [msg.notion_1, msg.notion_2, msg.notion_3, msg.subject].join(' ').toLowerCase()
+  if (text.includes('reclam') || text.includes('contestaz') || text.includes('lament')) return 'Reclami'
+  if (text.includes('fattur') || text.includes('pagament') || text.includes('rimborso')) return 'Fatture'
+  if (text.includes('dipendent') || text.includes('ferie') || text.includes('permess') || text.includes('stipend')) return 'Richieste dipendenti'
+  if (text.includes('ordin') || text.includes('acquist') || text.includes('forni')) return 'Ordini'
+
   return 'Spedizioni'
 }
 
@@ -46,7 +53,7 @@ export default async function DashboardPage({
 
   // ── Category view: Kanban filtered by fixed category ──────────────────────────────
   if (typeof category === 'string' && category) {
-    const filtered = kanbanMessages.filter((m) => mapToFixedCategory(m.notion_1) === category)
+    const filtered = kanbanMessages.filter((m) => mapToFixedCategory(m) === category)
     return (
       <AppShell userEmail={user.email ?? ''}>
         <KanbanBoard
@@ -65,7 +72,7 @@ export default async function DashboardPage({
   )
 
   for (const msg of messages) {
-    const key = mapToFixedCategory(msg.notion_1)
+    const key = mapToFixedCategory(msg)
     const existing = categoryMap.get(key)!
     existing.count++
     if (msg.status === 'arrived') existing.arrived++
