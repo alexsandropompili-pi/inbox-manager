@@ -25,12 +25,6 @@ export const DEFAULT_FILTERS: Filters = {
 
 // ─── Filter options ────────────────────────────────────────────────────────────
 
-const CHANNEL_OPTIONS: { value: ChannelFilter; label: string }[] = [
-  { value: 'all',      label: 'Tutti'     },
-  { value: 'email',    label: 'Email'     },
-  { value: 'whatsapp', label: 'WhatsApp'  },
-]
-
 const PRIORITY_OPTIONS: { value: PriorityFilter; label: string }[] = [
   { value: 'all',    label: 'Tutte' },
   { value: 'high',   label: 'Alta'  },
@@ -154,17 +148,6 @@ export function SearchBar({ filters, onChange, onReset, isFiltered, categoryTitl
 
       {/* Row 2: filter pills */}
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-          Canale
-        </span>
-        <PillGroup
-          options={CHANNEL_OPTIONS}
-          value={filters.channel}
-          onChange={(v) => onChange({ channel: v })}
-        />
-
-        <div className="h-4 w-px bg-gray-200" />
-
         <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
           Priorità
         </span>
