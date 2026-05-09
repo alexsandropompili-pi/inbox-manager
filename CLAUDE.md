@@ -1,2 +1,3 @@
 @AGENTS.md
 @DESIGN_SKILLS.md
+@PROGRESS.md
