@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import type { Message, KanbanStatus, MessagePriority, MessageChannel } from '@/types/database'
 import type { Operator } from '@/lib/team'
 import { findOperator } from '@/lib/team'
-import { SlaChip } from './SlaChip'
+
 
 const PRIORITY_CONFIG: Record<MessagePriority, { label: string; dot: string; badge: string }> = {
   high:   { label: 'Alta',   dot: 'bg-red-400',     badge: 'bg-red-50 text-red-600 ring-red-200' },
@@ -270,7 +270,6 @@ export function MessageCard({ message, columnStatus, isPending, onClick, operato
         </p>
 
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          {columnStatus !== 'replied' && <SlaChip message={message} />}
           <AssigneeDropdown
             assignedTo={message.assigned_to}
             operators={operators}
