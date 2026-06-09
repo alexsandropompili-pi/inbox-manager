@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ResetPasswordForm } from './ResetPasswordForm'
 
 export const metadata = {
-  title: 'Nuova password — InboxManager',
+  title: 'Nuova password — GP Courier',
 }
 
 export default async function ResetPasswordPage() {
@@ -17,7 +17,7 @@ export default async function ResetPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-white">InboxManager</h1>
+          <h1 className="text-2xl font-bold text-white">GP Courier</h1>
           <p className="mt-1 text-sm text-zinc-500">Scegli una nuova password per il tuo account</p>
         </div>
 

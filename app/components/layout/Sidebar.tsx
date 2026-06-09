@@ -169,9 +169,9 @@ export function Sidebar({ isOpen, onToggle, userEmail }: Props) {
           <div className="flex h-[65px] shrink-0 items-center border-b border-gray-200 px-4">
             <div className="flex items-center gap-3">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-xs font-bold text-white">
-                IM
+                GPC
               </div>
-              <span className="whitespace-nowrap text-sm font-bold tracking-tight text-gray-900">InboxManager</span>
+              <span className="whitespace-nowrap text-sm font-bold tracking-tight text-gray-900">GP Courier</span>
             </div>
           </div>
 
