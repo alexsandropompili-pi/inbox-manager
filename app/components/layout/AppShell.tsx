@@ -14,21 +14,27 @@ interface Props {
 
 export function AppShell({ userEmail, children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  // null = non ancora verificato, false = sessione non valida, true = ok
+  const [sessionReady, setSessionReady] = useState<boolean | null>(null)
   const router = useRouter()
 
   useEffect(() => {
-    // Se il flag non c'è significa che il tab è stato chiuso e riaperto → forza login
     if (!sessionStorage.getItem(SESSION_KEY)) {
+      // Tab riaperto senza sessione attiva → logout e redirect
       const supabase = createClient()
       supabase.auth.signOut().then(() => router.replace('/login'))
       return
     }
+    setSessionReady(true)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    // Imposta il flag per questa sessione di navigazione
-    sessionStorage.setItem(SESSION_KEY, '1')
-  }, [])
+    // Imposta il flag solo dopo che la sessione è confermata valida
+    if (sessionReady) sessionStorage.setItem(SESSION_KEY, '1')
+  }, [sessionReady])
+
+  // Blocca rendering finché il check sessionStorage non è completato
+  if (!sessionReady) return null
 
   return (
     <div className="flex h-screen overflow-hidden">
